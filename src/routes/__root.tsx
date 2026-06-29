@@ -11,6 +11,8 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import sbiLogo from "../assets/logo-sbi.png.asset.json";
+import britonLogo from "../assets/logo-briton.png.asset.json";
 
 function NotFoundComponent() {
   return (
@@ -113,14 +115,10 @@ function RootComponent() {
       <div className="min-h-screen flex flex-col">
         <header className="border-b bg-card sticky top-0 z-30">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between gap-4">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-md bg-primary text-primary-foreground grid place-items-center font-bold">
-                SBI
-              </div>
-              <div className="flex flex-col leading-tight">
-                <span className="text-sm font-semibold">Trainer Manager</span>
-                <span className="text-[11px] text-muted-foreground">Briton English Education</span>
-              </div>
+            <Link to="/" className="flex items-center gap-3 min-w-0">
+              <img src={sbiLogo.url} alt="SBI — Sekolah Berbahasa Inggris" className="h-10 w-auto" />
+              <span className="h-8 w-px bg-border hidden sm:block" />
+              <img src={britonLogo.url} alt="Briton English Education" className="h-8 w-auto hidden sm:block" />
             </Link>
             <nav className="flex items-center gap-1">
               <NavLink to="/">Dashboard</NavLink>
