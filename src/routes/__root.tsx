@@ -11,6 +11,8 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import sbiLogo from "../assets/logo-sbi.png.asset.json";
+import britonLogo from "../assets/logo-briton.png.asset.json";
 
 function NotFoundComponent() {
   return (
