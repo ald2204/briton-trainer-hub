@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { loadTrainers, daysUntil, isAvailableForAssignment, type Trainer } from "@/lib/trainers-store";
 import { Search } from "lucide-react";
 
-export const Route = createFileRoute("/trainers")({
+export const Route = createFileRoute("/trainers/")({
   head: () => ({
     meta: [
       { title: "Trainers — SBI Trainer Manager" },
