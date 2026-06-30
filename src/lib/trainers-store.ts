@@ -208,6 +208,12 @@ export function updateTrainer(id: string, patch: Partial<Trainer>): Trainer[] {
   return list;
 }
 
+export function deleteTrainer(id: string): Trainer[] {
+  const list = loadTrainers().filter((t) => t.id !== id);
+  saveTrainers(list);
+  return list;
+}
+
 export function getTrainer(id: string): Trainer | undefined {
   return loadTrainers().find((t) => t.id === id);
 }
