@@ -1,7 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { loadTrainers, daysUntil, isAvailableForAssignment, type Trainer } from "@/lib/trainers-store";
-import { Search } from "lucide-react";
+import { addTrainer, loadTrainers, daysUntil, isAvailableForAssignment, type Trainer } from "@/lib/trainers-store";
+import { Plus, Search } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/trainers/")({
   head: () => ({
@@ -64,6 +68,7 @@ function TrainersPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Trainers</h1>
           <p className="text-sm text-muted-foreground mt-1">{filtered.length} of {trainers.length} shown</p>
         </div>
+        <AddTrainerDialog onAdded={() => setTrainers(loadTrainers())} />
       </div>
 
       <div className="bg-card border rounded-xl p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -137,5 +142,123 @@ function TrainersPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function AddTrainerDialog({ onAdded }: { onAdded: () => void }) {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    fullName: "",
+    position: "Trainer",
+    email: "",
+    phone: "",
+    address: "",
+    qualification: "",
+    university: "",
+    major: "",
+    englishTest: "IELTS",
+    cefr: "C1",
+    englishScore: "",
+    testDate: "",
+    contractStart: new Date().toISOString().slice(0, 10),
+    contractEnd: "",
+    leaveEntitlement: "20",
+    status: "Active" as Trainer["status"],
+  });
+
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.fullName.trim() || !form.email.trim() || !form.contractEnd) return;
+    const t = addTrainer({
+      fullName: form.fullName.trim(),
+      position: form.position.trim(),
+      email: form.email.trim(),
+      phone: form.phone,
+      address: form.address,
+      qualification: form.qualification,
+      university: form.university,
+      major: form.major,
+      englishTest: form.englishTest,
+      cefr: form.cefr,
+      englishScore: form.englishScore ? Number(form.englishScore) : 0,
+      testDate: form.testDate || undefined,
+      contractStart: form.contractStart,
+      contractEnd: form.contractEnd,
+      leaveEntitlement: form.leaveEntitlement ? Number(form.leaveEntitlement) : 20,
+      status: form.status,
+    });
+    setOpen(false);
+    onAdded();
+    navigate({ to: "/trainers/$id", params: { id: t.id } });
+  };
+
+  const inputCls = "w-full px-3 py-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring";
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button><Plus className="h-4 w-4" /> Add Trainer</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add Trainer</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-5">
+          <section className="grid sm:grid-cols-2 gap-4">
+            <Field label="Full Name *"><Input required value={form.fullName} onChange={set("fullName")} /></Field>
+            <Field label="Position"><Input value={form.position} onChange={set("position")} /></Field>
+            <Field label="Email *"><Input type="email" required value={form.email} onChange={set("email")} /></Field>
+            <Field label="Phone"><Input value={form.phone} onChange={set("phone")} /></Field>
+            <Field label="Address"><Input value={form.address} onChange={set("address")} /></Field>
+            <Field label="Status">
+              <select value={form.status} onChange={set("status")} className={inputCls}>
+                <option>Active</option><option>On Leave</option><option>Inactive</option>
+              </select>
+            </Field>
+          </section>
+
+          <section className="grid sm:grid-cols-3 gap-4">
+            <Field label="Qualification"><Input value={form.qualification} onChange={set("qualification")} /></Field>
+            <Field label="University"><Input value={form.university} onChange={set("university")} /></Field>
+            <Field label="Major"><Input value={form.major} onChange={set("major")} /></Field>
+          </section>
+
+          <section className="grid sm:grid-cols-4 gap-4">
+            <Field label="English Test"><Input value={form.englishTest} onChange={set("englishTest")} /></Field>
+            <Field label="CEFR">
+              <select value={form.cefr} onChange={set("cefr")} className={inputCls}>
+                {["A1","A2","B1","B2","C1","C2"].map(l => <option key={l}>{l}</option>)}
+              </select>
+            </Field>
+            <Field label="Score"><Input type="number" step="0.1" value={form.englishScore} onChange={set("englishScore")} /></Field>
+            <Field label="Test Date"><Input type="date" value={form.testDate} onChange={set("testDate")} /></Field>
+          </section>
+
+          <section className="grid sm:grid-cols-3 gap-4">
+            <Field label="Contract Start *"><Input type="date" required value={form.contractStart} onChange={set("contractStart")} /></Field>
+            <Field label="Contract End *"><Input type="date" required value={form.contractEnd} onChange={set("contractEnd")} /></Field>
+            <Field label="Annual Leave (days)"><Input type="number" value={form.leaveEntitlement} onChange={set("leaveEntitlement")} /></Field>
+          </section>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button type="submit">Create Trainer</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

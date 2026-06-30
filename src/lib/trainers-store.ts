@@ -212,6 +212,59 @@ export function getTrainer(id: string): Trainer | undefined {
   return loadTrainers().find((t) => t.id === id);
 }
 
+export type NewTrainerInput = {
+  fullName: string;
+  position: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  qualification?: string;
+  university?: string;
+  major?: string;
+  englishTest?: string;
+  cefr?: string;
+  englishScore?: number;
+  testDate?: string;
+  contractStart: string;
+  contractEnd: string;
+  leaveEntitlement?: number;
+  status?: Trainer["status"];
+  photo?: string;
+};
+
+export function addTrainer(input: NewTrainerInput): Trainer {
+  const list = loadTrainers();
+  const id = `t-${Date.now().toString(36)}`;
+  const trainer: Trainer = {
+    id,
+    photo: input.photo || `https://i.pravatar.cc/150?u=${encodeURIComponent(input.email || id)}`,
+    fullName: input.fullName,
+    position: input.position,
+    email: input.email,
+    phone: input.phone || "",
+    address: input.address || "",
+    status: input.status || "Active",
+    academic: {
+      qualification: input.qualification || "",
+      university: input.university || "",
+      major: input.major || "",
+    },
+    english: {
+      test: input.englishTest || "",
+      cefr: input.cefr || "B2",
+      score: input.englishScore ?? 0,
+      testDate: input.testDate || new Date().toISOString().slice(0, 10),
+    },
+    performance: { date: new Date().toISOString().slice(0, 10), score: 0, comments: "" },
+    contract: { startDate: input.contractStart, endDate: input.contractEnd },
+    leave: { entitlement: input.leaveEntitlement ?? 20, taken: 0 },
+    availability: emptyAvail(),
+    notes: "",
+  };
+  saveTrainers([trainer, ...list]);
+  return trainer;
+}
+
 export function daysUntil(dateStr: string): number {
   const d = new Date(dateStr).getTime();
   const now = Date.now();
