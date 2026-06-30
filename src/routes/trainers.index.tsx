@@ -1,7 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { loadTrainers, daysUntil, isAvailableForAssignment, type Trainer } from "@/lib/trainers-store";
-import { Search } from "lucide-react";
+import { addTrainer, loadTrainers, daysUntil, isAvailableForAssignment, type Trainer } from "@/lib/trainers-store";
+import { Plus, Search } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/trainers/")({
   head: () => ({
