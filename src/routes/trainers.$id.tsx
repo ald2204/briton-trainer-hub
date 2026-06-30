@@ -1,8 +1,9 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   getTrainer,
   updateTrainer,
+  deleteTrainer,
   daysUntil,
   DAYS,
   SLOTS,
@@ -24,13 +25,29 @@ import {
   Calendar,
   StickyNote,
   AlertTriangle,
+  Pencil,
+  Check,
+  X,
+  Trash2,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/trainers/$id")({
   head: ({ params }) => ({
-    meta: [
-      { title: `Trainer ${params.id} — SBI Trainer Manager` },
-    ],
+    meta: [{ title: `Trainer ${params.id} — SBI Trainer Manager` }],
   }),
   component: ProfilePage,
   notFoundComponent: () => (
@@ -49,12 +66,42 @@ const SLOT_TONE: Record<SlotStatus, string> = {
 };
 const STATUSES: SlotStatus[] = ["Available", "Teaching", "Leave", "Unavailable"];
 
-function Section({ title, icon: Icon, children }: { title: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
+type SectionKey = "personal" | "academic" | "english" | "performance" | "contract" | "leave";
+
+function Section({
+  title,
+  icon: Icon,
+  editing,
+  onEdit,
+  onSave,
+  onCancel,
+  children,
+}: {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  editing?: boolean;
+  onEdit?: () => void;
+  onSave?: () => void;
+  onCancel?: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <section className="bg-card border rounded-xl">
-      <header className="flex items-center gap-2 px-5 py-3 border-b">
-        <Icon className="h-4 w-4 text-primary" />
-        <h2 className="font-semibold text-sm">{title}</h2>
+      <header className="flex items-center justify-between gap-2 px-5 py-3 border-b">
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4 text-primary" />
+          <h2 className="font-semibold text-sm">{title}</h2>
+        </div>
+        {onEdit && (
+          editing ? (
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="ghost" onClick={onCancel}><X className="h-4 w-4" /></Button>
+              <Button size="sm" onClick={onSave}><Check className="h-4 w-4" /> Save</Button>
+            </div>
+          ) : (
+            <Button size="sm" variant="ghost" onClick={onEdit}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
+          )
+        )}
       </header>
       <div className="p-5">{children}</div>
     </section>
@@ -70,9 +117,21 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+function EditField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
+      {children}
+    </div>
+  );
+}
+
 function ProfilePage() {
   const { id } = Route.useParams();
+  const navigate = useNavigate();
   const [trainer, setTrainer] = useState<Trainer | undefined>();
+  const [draft, setDraft] = useState<Trainer | undefined>();
+  const [editing, setEditing] = useState<SectionKey | null>(null);
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
@@ -87,6 +146,22 @@ function ProfilePage() {
   const remaining = trainer.leave.entitlement - trainer.leave.taken;
   const daysLeft = daysUntil(trainer.contract.endDate);
   const expiringSoon = daysLeft >= 0 && daysLeft <= 90;
+
+  const startEdit = (section: SectionKey) => {
+    setDraft(JSON.parse(JSON.stringify(trainer)));
+    setEditing(section);
+  };
+  const cancelEdit = () => {
+    setDraft(undefined);
+    setEditing(null);
+  };
+  const saveEdit = (patch: Partial<Trainer>) => {
+    const updated = { ...trainer, ...patch };
+    setTrainer(updated);
+    updateTrainer(trainer.id, patch);
+    setEditing(null);
+    setDraft(undefined);
+  };
 
   const cycleSlot = (day: DayKey, slot: SlotKey) => {
     const current = trainer.availability[day][slot];
@@ -115,11 +190,38 @@ function ProfilePage() {
     updateTrainer(trainer.id, { contract: updated.contract });
   };
 
+  const onDelete = () => {
+    deleteTrainer(trainer.id);
+    navigate({ to: "/trainers" });
+  };
+
+  const d = draft ?? trainer;
+  const setDraftField = (updater: (t: Trainer) => Trainer) => setDraft(updater(d));
+
   return (
     <div className="space-y-6">
-      <Link to="/trainers" className="text-sm text-muted-foreground hover:text-primary inline-flex items-center gap-1">
-        <ArrowLeft className="h-4 w-4" /> Back to trainers
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link to="/trainers" className="text-sm text-muted-foreground hover:text-primary inline-flex items-center gap-1">
+          <ArrowLeft className="h-4 w-4" /> Back to trainers
+        </Link>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /> Delete Trainer</Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete {trainer.fullName}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently removes the trainer record. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
 
       {(expiringSoon || trainer.status === "On Leave") && (
         <div className="rounded-lg border border-warning/40 bg-[color:var(--warning)]/10 p-3 flex items-start gap-2 text-sm">
@@ -152,54 +254,157 @@ function ProfilePage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Section title="Personal Information" icon={Mail}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Full Name" value={trainer.fullName} />
-            <Field label="Email" value={<a className="text-primary hover:underline" href={`mailto:${trainer.email}`}>{trainer.email}</a>} />
-            <Field label="Phone" value={<a className="text-primary hover:underline" href={`tel:${trainer.phone}`}><Phone className="h-3 w-3 inline mr-1" />{trainer.phone}</a>} />
-            <Field label="Address" value={<span><MapPin className="h-3 w-3 inline mr-1" />{trainer.address}</span>} />
-          </div>
+        <Section
+          title="Personal Information"
+          icon={Mail}
+          editing={editing === "personal"}
+          onEdit={() => startEdit("personal")}
+          onCancel={cancelEdit}
+          onSave={() => saveEdit({
+            fullName: d.fullName, email: d.email, phone: d.phone, address: d.address, position: d.position, status: d.status,
+          })}
+        >
+          {editing === "personal" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <EditField label="Full Name"><Input value={d.fullName} onChange={(e) => setDraftField((t) => ({ ...t, fullName: e.target.value }))} /></EditField>
+              <EditField label="Position"><Input value={d.position} onChange={(e) => setDraftField((t) => ({ ...t, position: e.target.value }))} /></EditField>
+              <EditField label="Email"><Input type="email" value={d.email} onChange={(e) => setDraftField((t) => ({ ...t, email: e.target.value }))} /></EditField>
+              <EditField label="Phone"><Input value={d.phone} onChange={(e) => setDraftField((t) => ({ ...t, phone: e.target.value }))} /></EditField>
+              <EditField label="Address"><Input value={d.address} onChange={(e) => setDraftField((t) => ({ ...t, address: e.target.value }))} /></EditField>
+              <EditField label="Status">
+                <select
+                  value={d.status}
+                  onChange={(e) => setDraftField((t) => ({ ...t, status: e.target.value as Trainer["status"] }))}
+                  className="w-full h-9 px-3 rounded-md border bg-background text-sm"
+                >
+                  <option>Active</option><option>On Leave</option><option>Inactive</option>
+                </select>
+              </EditField>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Full Name" value={trainer.fullName} />
+              <Field label="Email" value={<a className="text-primary hover:underline" href={`mailto:${trainer.email}`}>{trainer.email}</a>} />
+              <Field label="Phone" value={<a className="text-primary hover:underline" href={`tel:${trainer.phone}`}><Phone className="h-3 w-3 inline mr-1" />{trainer.phone}</a>} />
+              <Field label="Address" value={<span><MapPin className="h-3 w-3 inline mr-1" />{trainer.address}</span>} />
+            </div>
+          )}
         </Section>
 
-        <Section title="Academic Background" icon={GraduationCap}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Highest Qualification" value={trainer.academic.qualification} />
-            <Field label="University" value={trainer.academic.university} />
-            <Field label="Major" value={trainer.academic.major} />
-          </div>
+        <Section
+          title="Academic Background"
+          icon={GraduationCap}
+          editing={editing === "academic"}
+          onEdit={() => startEdit("academic")}
+          onCancel={cancelEdit}
+          onSave={() => saveEdit({ academic: d.academic })}
+        >
+          {editing === "academic" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <EditField label="Highest Qualification"><Input value={d.academic.qualification} onChange={(e) => setDraftField((t) => ({ ...t, academic: { ...t.academic, qualification: e.target.value } }))} /></EditField>
+              <EditField label="University"><Input value={d.academic.university} onChange={(e) => setDraftField((t) => ({ ...t, academic: { ...t.academic, university: e.target.value } }))} /></EditField>
+              <EditField label="Major"><Input value={d.academic.major} onChange={(e) => setDraftField((t) => ({ ...t, academic: { ...t.academic, major: e.target.value } }))} /></EditField>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Highest Qualification" value={trainer.academic.qualification} />
+              <Field label="University" value={trainer.academic.university} />
+              <Field label="Major" value={trainer.academic.major} />
+            </div>
+          )}
         </Section>
 
-        <Section title="English Profile" icon={Languages}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Latest Test" value={trainer.english.test} />
-            <Field label="CEFR Level" value={trainer.english.cefr} />
-            <Field label="Overall Score" value={trainer.english.score} />
-            <Field label="Test Date" value={trainer.english.testDate} />
-          </div>
+        <Section
+          title="English Profile"
+          icon={Languages}
+          editing={editing === "english"}
+          onEdit={() => startEdit("english")}
+          onCancel={cancelEdit}
+          onSave={() => saveEdit({ english: d.english })}
+        >
+          {editing === "english" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <EditField label="Latest Test"><Input value={d.english.test} onChange={(e) => setDraftField((t) => ({ ...t, english: { ...t.english, test: e.target.value } }))} /></EditField>
+              <EditField label="CEFR Level">
+                <select value={d.english.cefr} onChange={(e) => setDraftField((t) => ({ ...t, english: { ...t.english, cefr: e.target.value } }))} className="w-full h-9 px-3 rounded-md border bg-background text-sm">
+                  {["A1","A2","B1","B2","C1","C2"].map(l => <option key={l}>{l}</option>)}
+                </select>
+              </EditField>
+              <EditField label="Overall Score"><Input type="number" step="0.1" value={d.english.score} onChange={(e) => setDraftField((t) => ({ ...t, english: { ...t.english, score: Number(e.target.value) } }))} /></EditField>
+              <EditField label="Test Date"><Input type="date" value={d.english.testDate} onChange={(e) => setDraftField((t) => ({ ...t, english: { ...t.english, testDate: e.target.value } }))} /></EditField>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Latest Test" value={trainer.english.test} />
+              <Field label="CEFR Level" value={trainer.english.cefr} />
+              <Field label="Overall Score" value={trainer.english.score} />
+              <Field label="Test Date" value={trainer.english.testDate} />
+            </div>
+          )}
         </Section>
 
-        <Section title="Performance (latest)" icon={Star}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Appraisal Date" value={trainer.performance.date} />
-            <Field label="Overall Score" value={`${trainer.performance.score.toFixed(1)} / 5`} />
-          </div>
-          <div className="mt-4">
-            <Field label="Comments" value={<p className="text-sm font-normal text-foreground/80">{trainer.performance.comments}</p>} />
-          </div>
+        <Section
+          title="Performance (latest)"
+          icon={Star}
+          editing={editing === "performance"}
+          onEdit={() => startEdit("performance")}
+          onCancel={cancelEdit}
+          onSave={() => saveEdit({ performance: d.performance })}
+        >
+          {editing === "performance" ? (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <EditField label="Appraisal Date"><Input type="date" value={d.performance.date} onChange={(e) => setDraftField((t) => ({ ...t, performance: { ...t.performance, date: e.target.value } }))} /></EditField>
+                <EditField label="Overall Score (0–5)"><Input type="number" step="0.1" min="0" max="5" value={d.performance.score} onChange={(e) => setDraftField((t) => ({ ...t, performance: { ...t.performance, score: Number(e.target.value) } }))} /></EditField>
+              </div>
+              <EditField label="Comments">
+                <textarea
+                  value={d.performance.comments}
+                  onChange={(e) => setDraftField((t) => ({ ...t, performance: { ...t.performance, comments: e.target.value } }))}
+                  rows={3}
+                  className="w-full rounded-md border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </EditField>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Appraisal Date" value={trainer.performance.date} />
+                <Field label="Overall Score" value={`${trainer.performance.score.toFixed(1)} / 5`} />
+              </div>
+              <div className="mt-4">
+                <Field label="Comments" value={<p className="text-sm font-normal text-foreground/80">{trainer.performance.comments}</p>} />
+              </div>
+            </>
+          )}
         </Section>
 
-        <Section title="Contract" icon={FileText}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Start Date" value={trainer.contract.startDate} />
-            <Field label="End Date" value={
-              <span>
-                {trainer.contract.endDate}
-                <span className={`ml-2 text-xs ${expiringSoon ? "text-destructive" : "text-muted-foreground"}`}>
-                  ({daysLeft} days)
+        <Section
+          title="Contract"
+          icon={FileText}
+          editing={editing === "contract"}
+          onEdit={() => startEdit("contract")}
+          onCancel={cancelEdit}
+          onSave={() => saveEdit({ contract: { ...d.contract } })}
+        >
+          {editing === "contract" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <EditField label="Start Date"><Input type="date" value={d.contract.startDate} onChange={(e) => setDraftField((t) => ({ ...t, contract: { ...t.contract, startDate: e.target.value } }))} /></EditField>
+              <EditField label="End Date"><Input type="date" value={d.contract.endDate} onChange={(e) => setDraftField((t) => ({ ...t, contract: { ...t.contract, endDate: e.target.value } }))} /></EditField>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Start Date" value={trainer.contract.startDate} />
+              <Field label="End Date" value={
+                <span>
+                  {trainer.contract.endDate}
+                  <span className={`ml-2 text-xs ${expiringSoon ? "text-destructive" : "text-muted-foreground"}`}>
+                    ({daysLeft} days)
+                  </span>
                 </span>
-              </span>
-            } />
-          </div>
+              } />
+            </div>
+          )}
           <div className="mt-5 flex items-center gap-3">
             <label className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md border bg-background hover:bg-accent cursor-pointer">
               <Upload className="h-4 w-4" />
@@ -214,16 +419,38 @@ function ProfilePage() {
           </div>
         </Section>
 
-        <Section title="Leave" icon={Calendar}>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="Annual Entitlement" value={`${trainer.leave.entitlement} days`} />
-            <Field label="Taken" value={`${trainer.leave.taken} days`} />
-            <Field label="Remaining" value={<span className="text-primary">{remaining} days</span>} />
-          </div>
-          {trainer.leave.currentLeave && (
-            <div className="mt-4 rounded-md border bg-[color:var(--warning)]/10 p-3 text-sm">
-              On leave: <strong>{trainer.leave.currentLeave.from}</strong> → <strong>{trainer.leave.currentLeave.to}</strong>
+        <Section
+          title="Leave"
+          icon={Calendar}
+          editing={editing === "leave"}
+          onEdit={() => startEdit("leave")}
+          onCancel={cancelEdit}
+          onSave={() => saveEdit({ leave: d.leave })}
+        >
+          {editing === "leave" ? (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <EditField label="Annual Entitlement (days)"><Input type="number" value={d.leave.entitlement} onChange={(e) => setDraftField((t) => ({ ...t, leave: { ...t.leave, entitlement: Number(e.target.value) } }))} /></EditField>
+                <EditField label="Taken (days)"><Input type="number" value={d.leave.taken} onChange={(e) => setDraftField((t) => ({ ...t, leave: { ...t.leave, taken: Number(e.target.value) } }))} /></EditField>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <EditField label="Current Leave From"><Input type="date" value={d.leave.currentLeave?.from ?? ""} onChange={(e) => setDraftField((t) => ({ ...t, leave: { ...t.leave, currentLeave: e.target.value ? { from: e.target.value, to: t.leave.currentLeave?.to ?? e.target.value } : undefined } }))} /></EditField>
+                <EditField label="Current Leave To"><Input type="date" value={d.leave.currentLeave?.to ?? ""} onChange={(e) => setDraftField((t) => ({ ...t, leave: { ...t.leave, currentLeave: t.leave.currentLeave ? { ...t.leave.currentLeave, to: e.target.value } : (e.target.value ? { from: e.target.value, to: e.target.value } : undefined) } }))} /></EditField>
+              </div>
             </div>
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field label="Annual Entitlement" value={`${trainer.leave.entitlement} days`} />
+                <Field label="Taken" value={`${trainer.leave.taken} days`} />
+                <Field label="Remaining" value={<span className="text-primary">{remaining} days</span>} />
+              </div>
+              {trainer.leave.currentLeave && (
+                <div className="mt-4 rounded-md border bg-[color:var(--warning)]/10 p-3 text-sm">
+                  On leave: <strong>{trainer.leave.currentLeave.from}</strong> → <strong>{trainer.leave.currentLeave.to}</strong>
+                </div>
+              )}
+            </>
           )}
         </Section>
       </div>
@@ -235,8 +462,8 @@ function ProfilePage() {
             <thead>
               <tr>
                 <th className="text-left text-xs uppercase tracking-wide text-muted-foreground p-2"></th>
-                {DAYS.map((d) => (
-                  <th key={d} className="text-xs uppercase tracking-wide text-muted-foreground p-2">{d}</th>
+                {DAYS.map((day) => (
+                  <th key={day} className="text-xs uppercase tracking-wide text-muted-foreground p-2">{day}</th>
                 ))}
               </tr>
             </thead>
