@@ -1,9 +1,12 @@
-import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import {
-  getTrainer,
+  useTrainer,
   updateTrainer,
   deleteTrainer,
+  loadHistory,
+  restoreVersion,
+  fileToPhotoDataUrl,
   daysUntil,
   DAYS,
   SLOTS,
@@ -11,6 +14,7 @@ import {
   type SlotStatus,
   type DayKey,
   type SlotKey,
+  type TrainerVersion,
 } from "@/lib/trainers-store";
 import {
   ArrowLeft,
@@ -21,7 +25,6 @@ import {
   Languages,
   Star,
   FileText,
-  Upload,
   Calendar,
   StickyNote,
   AlertTriangle,
@@ -29,6 +32,9 @@ import {
   Check,
   X,
   Trash2,
+  Camera,
+  History,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,18 +50,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/trainers/$id")({
   head: ({ params }) => ({
     meta: [{ title: `Trainer ${params.id} — SBI Trainer Manager` }],
   }),
   component: ProfilePage,
-  notFoundComponent: () => (
-    <div className="py-20 text-center">
-      <h1 className="text-xl font-semibold">Trainer not found</h1>
-      <Link to="/trainers" className="text-primary text-sm mt-3 inline-block">Back to trainers</Link>
-    </div>
-  ),
 });
 
 const SLOT_TONE: Record<SlotStatus, string> = {
@@ -129,19 +130,27 @@ function EditField({ label, children }: { label: string; children: React.ReactNo
 function ProfilePage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
-  const [trainer, setTrainer] = useState<Trainer | undefined>();
+  const { trainer, ready } = useTrainer(id);
   const [draft, setDraft] = useState<Trainer | undefined>();
   const [editing, setEditing] = useState<SectionKey | null>(null);
   const [notes, setNotes] = useState("");
+  const [notesDirty, setNotesDirty] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const t = getTrainer(id);
-    if (!t) throw notFound();
-    setTrainer(t);
-    setNotes(t.notes);
-  }, [id]);
+    if (trainer && !notesDirty) setNotes(trainer.notes);
+  }, [trainer, notesDirty]);
 
-  if (!trainer) return null;
+  if (!ready) return <div className="py-20 text-center text-sm text-muted-foreground">Loading…</div>;
+  if (!trainer) {
+    return (
+      <div className="py-20 text-center">
+        <h1 className="text-xl font-semibold">Trainer not found</h1>
+        <Link to="/trainers" className="text-primary text-sm mt-3 inline-block">Back to trainers</Link>
+      </div>
+    );
+  }
 
   const remaining = trainer.leave.entitlement - trainer.leave.taken;
   const daysLeft = daysUntil(trainer.contract.endDate);
@@ -156,8 +165,6 @@ function ProfilePage() {
     setEditing(null);
   };
   const saveEdit = (patch: Partial<Trainer>) => {
-    const updated = { ...trainer, ...patch };
-    setTrainer(updated);
     updateTrainer(trainer.id, patch);
     setEditing(null);
     setDraft(undefined);
@@ -166,32 +173,34 @@ function ProfilePage() {
   const cycleSlot = (day: DayKey, slot: SlotKey) => {
     const current = trainer.availability[day][slot];
     const next = STATUSES[(STATUSES.indexOf(current) + 1) % STATUSES.length];
-    const updated: Trainer = {
-      ...trainer,
-      availability: {
-        ...trainer.availability,
-        [day]: { ...trainer.availability[day], [slot]: next },
-      },
+    const availability = {
+      ...trainer.availability,
+      [day]: { ...trainer.availability[day], [slot]: next },
     };
-    setTrainer(updated);
-    updateTrainer(trainer.id, { availability: updated.availability });
+    updateTrainer(trainer.id, { availability });
   };
 
   const saveNotes = () => {
+    if (!notesDirty) return;
     updateTrainer(trainer.id, { notes });
-    setTrainer({ ...trainer, notes });
+    setNotesDirty(false);
   };
 
-  const onUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onPhotoPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const updated = { ...trainer, contract: { ...trainer.contract, fileName: file.name } };
-    setTrainer(updated);
-    updateTrainer(trainer.id, { contract: updated.contract });
+    try {
+      const dataUrl = await fileToPhotoDataUrl(file);
+      await updateTrainer(trainer.id, { photo: dataUrl });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      e.target.value = "";
+    }
   };
 
-  const onDelete = () => {
-    deleteTrainer(trainer.id);
+  const onDelete = async () => {
+    await deleteTrainer(trainer.id);
     navigate({ to: "/trainers" });
   };
 
@@ -204,23 +213,28 @@ function ProfilePage() {
         <Link to="/trainers" className="text-sm text-muted-foreground hover:text-primary inline-flex items-center gap-1">
           <ArrowLeft className="h-4 w-4" /> Back to trainers
         </Link>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /> Delete Trainer</Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete {trainer.fullName}?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This permanently removes the trainer record. This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
+            <History className="h-4 w-4" /> Version history
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /> Delete Trainer</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {trainer.fullName}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This permanently removes the trainer record. Prior version snapshots will also be deleted. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
       {(expiringSoon || trainer.status === "On Leave") && (
@@ -236,7 +250,24 @@ function ProfilePage() {
       )}
 
       <div className="bg-card border rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
-        <img src={trainer.photo} alt={trainer.fullName} className="h-20 w-20 rounded-full object-cover ring-2 ring-primary/20" />
+        <div className="relative group">
+          <img src={trainer.photo} alt={trainer.fullName} className="h-20 w-20 rounded-full object-cover ring-2 ring-primary/20" />
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="Change photo"
+          >
+            <Camera className="h-5 w-5" />
+          </button>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={onPhotoPick}
+          />
+        </div>
         <div className="flex-1">
           <h1 className="text-2xl font-semibold">{trainer.fullName}</h1>
           <div className="text-sm text-muted-foreground">{trainer.position}</div>
@@ -250,6 +281,9 @@ function ProfilePage() {
               "bg-muted text-muted-foreground"
             }`}>{trainer.status}</span>
           </div>
+          <Button variant="ghost" size="sm" className="mt-2 -ml-2 h-7 text-xs" onClick={() => photoInputRef.current?.click()}>
+            <Camera className="h-3.5 w-3.5" /> Change photo
+          </Button>
         </div>
       </div>
 
@@ -405,18 +439,6 @@ function ProfilePage() {
               } />
             </div>
           )}
-          <div className="mt-5 flex items-center gap-3">
-            <label className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md border bg-background hover:bg-accent cursor-pointer">
-              <Upload className="h-4 w-4" />
-              Upload Contract (PDF)
-              <input type="file" accept="application/pdf" onChange={onUpload} className="hidden" />
-            </label>
-            {trainer.contract.fileName && (
-              <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                <FileText className="h-3 w-3" /> {trainer.contract.fileName}
-              </span>
-            )}
-          </div>
         </Section>
 
         <Section
@@ -494,7 +516,7 @@ function ProfilePage() {
       <Section title="Notes" icon={StickyNote}>
         <textarea
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          onChange={(e) => { setNotes(e.target.value); setNotesDirty(true); }}
           onBlur={saveNotes}
           rows={4}
           placeholder="Manager notes…"
@@ -502,6 +524,108 @@ function ProfilePage() {
         />
         <div className="mt-2 text-xs text-muted-foreground">Notes save automatically when you click away.</div>
       </Section>
+
+      <HistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        trainerId={trainer.id}
+        trainerName={trainer.fullName}
+      />
     </div>
+  );
+}
+
+function HistoryDialog({
+  open,
+  onOpenChange,
+  trainerId,
+  trainerName,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  trainerId: string;
+  trainerName: string;
+}) {
+  const [versions, setVersions] = useState<TrainerVersion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [restoring, setRestoring] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    const list = await loadHistory(trainerId);
+    setVersions(list);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (open) refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, trainerId]);
+
+  const doRestore = async (v: TrainerVersion) => {
+    setRestoring(v.id);
+    await restoreVersion(trainerId, v);
+    setRestoring(null);
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="h-4 w-4" /> Version history — {trainerName}
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-xs text-muted-foreground -mt-2">
+          One snapshot per day showing that day's final state. Restore to roll back accidental changes.
+        </p>
+        {loading ? (
+          <div className="py-10 text-center text-sm text-muted-foreground">Loading history…</div>
+        ) : versions.length === 0 ? (
+          <div className="py-10 text-center text-sm text-muted-foreground">No history yet.</div>
+        ) : (
+          <ul className="divide-y border rounded-md">
+            {versions.map((v, i) => {
+              const isCurrent = i === 0;
+              return (
+                <li key={v.id} className="p-3 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium">
+                      {v.snapshot_date}
+                      {isCurrent && <span className="ml-2 text-xs text-primary">(today · current)</span>}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {v.data.fullName} · {v.data.position} · {v.data.status}
+                    </div>
+                  </div>
+                  {!isCurrent && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="outline" disabled={restoring === v.id}>
+                          <RotateCcw className="h-3.5 w-3.5" /> Restore
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Restore version from {v.snapshot_date}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This replaces the current record with the snapshot from {v.snapshot_date}. Today's current state will still be recoverable from history.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => doRestore(v)}>Restore</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

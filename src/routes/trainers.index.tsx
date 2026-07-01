@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { addTrainer, loadTrainers, daysUntil, isAvailableForAssignment, type Trainer } from "@/lib/trainers-store";
+import { useMemo, useState } from "react";
+import { addTrainer, useTrainers, daysUntil, isAvailableForAssignment, type Trainer } from "@/lib/trainers-store";
 import { Plus, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -36,15 +36,11 @@ function StatusBadge({ status }: { status: Trainer["status"] }) {
 }
 
 function TrainersPage() {
-  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const { trainers } = useTrainers();
   const [q, setQ] = useState("");
   const [cefr, setCefr] = useState("All");
   const [avail, setAvail] = useState("All");
   const [exp, setExp] = useState("all");
-
-  useEffect(() => {
-    setTrainers(loadTrainers());
-  }, []);
 
   const filtered = useMemo(() => {
     return trainers.filter((t) => {
@@ -68,7 +64,7 @@ function TrainersPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Trainers</h1>
           <p className="text-sm text-muted-foreground mt-1">{filtered.length} of {trainers.length} shown</p>
         </div>
-        <AddTrainerDialog onAdded={() => setTrainers(loadTrainers())} />
+        <AddTrainerDialog />
       </div>
 
       <div className="bg-card border rounded-xl p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -154,9 +150,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function AddTrainerDialog({ onAdded }: { onAdded: () => void }) {
+function AddTrainerDialog() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     fullName: "",
     position: "Trainer",
@@ -179,10 +176,11 @@ function AddTrainerDialog({ onAdded }: { onAdded: () => void }) {
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.fullName.trim() || !form.email.trim() || !form.contractEnd) return;
-    const t = addTrainer({
+    setSubmitting(true);
+    const t = await addTrainer({
       fullName: form.fullName.trim(),
       position: form.position.trim(),
       email: form.email.trim(),
@@ -200,8 +198,8 @@ function AddTrainerDialog({ onAdded }: { onAdded: () => void }) {
       leaveEntitlement: form.leaveEntitlement ? Number(form.leaveEntitlement) : 20,
       status: form.status,
     });
+    setSubmitting(false);
     setOpen(false);
-    onAdded();
     navigate({ to: "/trainers/$id", params: { id: t.id } });
   };
 
@@ -255,7 +253,7 @@ function AddTrainerDialog({ onAdded }: { onAdded: () => void }) {
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit">Create Trainer</Button>
+            <Button type="submit" disabled={submitting}>{submitting ? "Creating…" : "Create Trainer"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
