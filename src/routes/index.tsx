@@ -1,10 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import {
-  loadTrainers,
+  useTrainers,
   daysUntil,
   isAvailableForAssignment,
-  type Trainer,
 } from "@/lib/trainers-store";
 import {
   Users,
@@ -57,10 +55,7 @@ function Stat({
 }
 
 function Dashboard() {
-  const [trainers, setTrainers] = useState<Trainer[]>([]);
-  useEffect(() => {
-    setTrainers(loadTrainers());
-  }, []);
+  const { trainers } = useTrainers();
 
   const total = trainers.length;
   const active = trainers.filter((t) => t.status === "Active").length;
