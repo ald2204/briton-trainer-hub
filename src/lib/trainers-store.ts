@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
 export type SlotStatus = "Available" | "Teaching" | "Leave" | "Unavailable";
 export type DayKey = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 export const DAYS: DayKey[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -18,10 +21,18 @@ export interface Trainer {
   academic: { qualification: string; university: string; major: string };
   english: { test: string; cefr: string; score: number; testDate: string };
   performance: { date: string; score: number; comments: string };
-  contract: { startDate: string; endDate: string; fileName?: string };
+  contract: { startDate: string; endDate: string };
   leave: { entitlement: number; taken: number; currentLeave?: { from: string; to: string } };
   availability: Availability;
   notes: string;
+}
+
+export interface TrainerVersion {
+  id: string;
+  trainer_id: string;
+  snapshot_date: string;
+  data: Trainer;
+  updated_at: string;
 }
 
 const emptyAvail = (pattern: Partial<Record<DayKey, Partial<Record<SlotKey, SlotStatus>>>> = {}): Availability => {
@@ -62,7 +73,7 @@ const SEED: Trainer[] = [
     academic: { qualification: "MA TESOL", university: "University of Manchester", major: "Applied Linguistics" },
     english: { test: "IELTS", cefr: "C2", score: 8.5, testDate: addDays(-180) },
     performance: { date: addDays(-30), score: 4.7, comments: "Excellent classroom presence; mentors new trainers effectively." },
-    contract: { startDate: addDays(-540), endDate: addDays(45), fileName: "sarah-contract.pdf" },
+    contract: { startDate: addDays(-540), endDate: addDays(45) },
     leave: { entitlement: 20, taken: 6 },
     availability: weekdayTeach,
     notes: "Strong fit for IELTS prep classes.",
@@ -179,43 +190,122 @@ const SEED: Trainer[] = [
   },
 ];
 
-const KEY = "sbi-trainers-v1";
+// ---------------- Shared reactive cache ----------------
 
-const isBrowser = () => typeof window !== "undefined";
+type Listener = (list: Trainer[]) => void;
+let cache: Trainer[] = [];
+let loaded = false;
+let seeding = false;
+const listeners = new Set<Listener>();
+let realtimeInitialized = false;
 
-export function loadTrainers(): Trainer[] {
-  if (!isBrowser()) return SEED;
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) {
-      localStorage.setItem(KEY, JSON.stringify(SEED));
-      return SEED;
-    }
-    return JSON.parse(raw) as Trainer[];
-  } catch {
-    return SEED;
+function notify() {
+  for (const l of listeners) l(cache);
+}
+
+function sortTrainers(list: Trainer[]) {
+  return [...list].sort((a, b) => a.fullName.localeCompare(b.fullName));
+}
+
+async function fetchAll() {
+  const { data, error } = await supabase
+    .from("trainers")
+    .select("id, data")
+    .order("id");
+  if (error) {
+    console.error("Failed to load trainers", error);
+    return;
   }
+  cache = sortTrainers((data ?? []).map((r: any) => ({ ...(r.data as Trainer), id: r.id })));
+  if (cache.length === 0 && !seeding) {
+    seeding = true;
+    await supabase.from("trainers").insert(
+      SEED.map((t) => ({ id: t.id, data: t as any }))
+    );
+    seeding = false;
+    const res = await supabase.from("trainers").select("id, data").order("id");
+    cache = sortTrainers((res.data ?? []).map((r: any) => ({ ...(r.data as Trainer), id: r.id })));
+  }
+  loaded = true;
+  notify();
 }
 
-export function saveTrainers(list: Trainer[]) {
-  if (!isBrowser()) return;
-  localStorage.setItem(KEY, JSON.stringify(list));
+function initRealtime() {
+  if (realtimeInitialized) return;
+  realtimeInitialized = true;
+  supabase
+    .channel("trainers-sync")
+    .on("postgres_changes", { event: "*", schema: "public", table: "trainers" }, (payload) => {
+      if (payload.eventType === "DELETE") {
+        const id = (payload.old as any)?.id;
+        cache = cache.filter((t) => t.id !== id);
+      } else {
+        const row = payload.new as any;
+        const t: Trainer = { ...(row.data as Trainer), id: row.id };
+        const idx = cache.findIndex((x) => x.id === t.id);
+        if (idx >= 0) cache[idx] = t;
+        else cache = sortTrainers([...cache, t]);
+      }
+      notify();
+    })
+    .subscribe();
 }
 
-export function updateTrainer(id: string, patch: Partial<Trainer>): Trainer[] {
-  const list = loadTrainers().map((t) => (t.id === id ? { ...t, ...patch } : t));
-  saveTrainers(list);
-  return list;
+export function useTrainers() {
+  const [list, setList] = useState<Trainer[]>(cache);
+  const [ready, setReady] = useState(loaded);
+  useEffect(() => {
+    const cb = (l: Trainer[]) => {
+      setList([...l]);
+      setReady(true);
+    };
+    listeners.add(cb);
+    initRealtime();
+    if (!loaded) fetchAll();
+    else cb(cache);
+    return () => {
+      listeners.delete(cb);
+    };
+  }, []);
+  return { trainers: list, ready };
 }
 
-export function deleteTrainer(id: string): Trainer[] {
-  const list = loadTrainers().filter((t) => t.id !== id);
-  saveTrainers(list);
-  return list;
+export function useTrainer(id: string) {
+  const { trainers, ready } = useTrainers();
+  return { trainer: trainers.find((t) => t.id === id), ready };
 }
 
-export function getTrainer(id: string): Trainer | undefined {
-  return loadTrainers().find((t) => t.id === id);
+// ---------------- Mutations ----------------
+
+export async function updateTrainer(id: string, patch: Partial<Trainer>) {
+  const current = cache.find((t) => t.id === id);
+  if (!current) return;
+  const updated: Trainer = { ...current, ...patch };
+  // Optimistic update
+  cache = cache.map((t) => (t.id === id ? updated : t));
+  notify();
+  const { error } = await supabase
+    .from("trainers")
+    .update({ data: updated as any })
+    .eq("id", id);
+  if (error) console.error("updateTrainer failed", error);
+}
+
+export async function replaceTrainer(id: string, next: Trainer) {
+  cache = cache.map((t) => (t.id === id ? next : t));
+  notify();
+  const { error } = await supabase
+    .from("trainers")
+    .update({ data: next as any })
+    .eq("id", id);
+  if (error) console.error("replaceTrainer failed", error);
+}
+
+export async function deleteTrainer(id: string) {
+  cache = cache.filter((t) => t.id !== id);
+  notify();
+  const { error } = await supabase.from("trainers").delete().eq("id", id);
+  if (error) console.error("deleteTrainer failed", error);
 }
 
 export type NewTrainerInput = {
@@ -238,8 +328,7 @@ export type NewTrainerInput = {
   photo?: string;
 };
 
-export function addTrainer(input: NewTrainerInput): Trainer {
-  const list = loadTrainers();
+export async function addTrainer(input: NewTrainerInput): Promise<Trainer> {
   const id = `t-${Date.now().toString(36)}`;
   const trainer: Trainer = {
     id,
@@ -267,9 +356,36 @@ export function addTrainer(input: NewTrainerInput): Trainer {
     availability: emptyAvail(),
     notes: "",
   };
-  saveTrainers([trainer, ...list]);
+  cache = sortTrainers([...cache, trainer]);
+  notify();
+  const { error } = await supabase.from("trainers").insert({ id: trainer.id, data: trainer as any });
+  if (error) console.error("addTrainer failed", error);
   return trainer;
 }
+
+// ---------------- History ----------------
+
+export async function loadHistory(trainerId: string): Promise<TrainerVersion[]> {
+  const { data, error } = await supabase
+    .from("trainer_versions")
+    .select("*")
+    .eq("trainer_id", trainerId)
+    .order("snapshot_date", { ascending: false });
+  if (error) {
+    console.error("loadHistory failed", error);
+    return [];
+  }
+  return (data ?? []) as unknown as TrainerVersion[];
+}
+
+export async function restoreVersion(trainerId: string, version: TrainerVersion) {
+  // The snapshot's data represents that day's final state.
+  // Ensure the ID matches, then overwrite the trainer.
+  const restored: Trainer = { ...(version.data as Trainer), id: trainerId };
+  await replaceTrainer(trainerId, restored);
+}
+
+// ---------------- Helpers ----------------
 
 export function daysUntil(dateStr: string): number {
   const d = new Date(dateStr).getTime();
@@ -280,4 +396,18 @@ export function daysUntil(dateStr: string): number {
 export function isAvailableForAssignment(t: Trainer): boolean {
   if (t.status !== "Active") return false;
   return DAYS.some((d) => SLOTS.some((s) => t.availability[d][s] === "Available"));
+}
+
+// Resize + compress an image File into a small JPEG data URL suitable for DB storage.
+export async function fileToPhotoDataUrl(file: File, max = 400, quality = 0.85): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  return canvas.toDataURL("image/jpeg", quality);
 }
