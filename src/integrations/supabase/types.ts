@@ -14,7 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      trainer_versions: {
+        Row: {
+          data: Json
+          id: string
+          snapshot_date: string
+          trainer_id: string
+          updated_at: string
+        }
+        Insert: {
+          data: Json
+          id?: string
+          snapshot_date: string
+          trainer_id: string
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          id?: string
+          snapshot_date?: string
+          trainer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainer_versions_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trainers: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
