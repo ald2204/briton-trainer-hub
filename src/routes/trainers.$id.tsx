@@ -176,6 +176,7 @@ function ProfilePage() {
   };
 
   const cycleSlot = (day: DayKey, slot: SlotKey) => {
+    if (!isAdmin) return;
     const current = trainer.availability[day][slot];
     const next = STATUSES[(STATUSES.indexOf(current) + 1) % STATUSES.length];
     const availability = {
@@ -186,12 +187,13 @@ function ProfilePage() {
   };
 
   const saveNotes = () => {
-    if (!notesDirty) return;
+    if (!isAdmin || !notesDirty) return;
     updateTrainer(trainer.id, { notes });
     setNotesDirty(false);
   };
 
   const onPhotoPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isAdmin) { e.target.value = ""; return; }
     const file = e.target.files?.[0];
     if (!file) return;
     try {
