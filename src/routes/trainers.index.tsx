@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { addTrainer, useTrainers, daysUntil, isAvailableForAssignment, type Trainer } from "@/lib/trainers-store";
+import { useAuth } from "@/lib/auth";
 import { Plus, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ function StatusBadge({ status }: { status: Trainer["status"] }) {
 
 function TrainersPage() {
   const { trainers } = useTrainers();
+  const { isAdmin } = useAuth();
   const [q, setQ] = useState("");
   const [cefr, setCefr] = useState("All");
   const [avail, setAvail] = useState("All");
@@ -64,7 +66,7 @@ function TrainersPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Trainers</h1>
           <p className="text-sm text-muted-foreground mt-1">{filtered.length} of {trainers.length} shown</p>
         </div>
-        <AddTrainerDialog />
+        {isAdmin && <AddTrainerDialog />}
       </div>
 
       <div className="bg-card border rounded-xl p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
