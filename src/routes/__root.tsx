@@ -13,6 +13,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import sbiLogo from "../assets/logo-sbi.png.asset.json";
 import britonLogo from "../assets/logo-briton.png.asset.json";
+import { useAuth, signOut } from "@/lib/auth";
+import { LogIn, LogOut, ShieldCheck } from "lucide-react";
 
 function NotFoundComponent() {
   return (
@@ -131,6 +133,7 @@ function RootComponent() {
             <nav className="flex items-center gap-1">
               <NavLink to="/">Dashboard</NavLink>
               <NavLink to="/trainers">Trainers</NavLink>
+              <AuthNav />
             </nav>
           </div>
         </header>
@@ -142,5 +145,36 @@ function RootComponent() {
         </footer>
       </div>
     </QueryClientProvider>
+  );
+}
+
+function AuthNav() {
+  const { user, isAdmin, ready } = useAuth();
+  if (!ready) return null;
+  if (!user) {
+    return (
+      <Link
+        to="/auth"
+        className="ml-2 inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:opacity-90"
+      >
+        <LogIn className="h-4 w-4" /> Sign in
+      </Link>
+    );
+  }
+  return (
+    <div className="ml-2 flex items-center gap-2">
+      {isAdmin && (
+        <span className="hidden sm:inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-primary-soft text-primary">
+          <ShieldCheck className="h-3 w-3" /> Admin
+        </span>
+      )}
+      <span className="hidden md:inline text-xs text-muted-foreground max-w-[10rem] truncate">{user.email}</span>
+      <button
+        onClick={() => signOut()}
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium border hover:bg-accent"
+      >
+        <LogOut className="h-4 w-4" /> Sign out
+      </button>
+    </div>
   );
 }

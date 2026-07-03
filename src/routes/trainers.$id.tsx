@@ -51,6 +51,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/trainers/$id")({
   head: ({ params }) => ({
@@ -76,6 +77,7 @@ function Section({
   onEdit,
   onSave,
   onCancel,
+  canEdit = true,
   children,
 }: {
   title: string;
@@ -84,6 +86,7 @@ function Section({
   onEdit?: () => void;
   onSave?: () => void;
   onCancel?: () => void;
+  canEdit?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -93,7 +96,7 @@ function Section({
           <Icon className="h-4 w-4 text-primary" />
           <h2 className="font-semibold text-sm">{title}</h2>
         </div>
-        {onEdit && (
+        {onEdit && canEdit && (
           editing ? (
             <div className="flex items-center gap-1">
               <Button size="sm" variant="ghost" onClick={onCancel}><X className="h-4 w-4" /></Button>
@@ -131,6 +134,7 @@ function ProfilePage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { trainer, ready } = useTrainer(id);
+  const { isAdmin } = useAuth();
   const [draft, setDraft] = useState<Trainer | undefined>();
   const [editing, setEditing] = useState<SectionKey | null>(null);
   const [notes, setNotes] = useState("");
@@ -171,6 +175,7 @@ function ProfilePage() {
   };
 
   const cycleSlot = (day: DayKey, slot: SlotKey) => {
+    if (!isAdmin) return;
     const current = trainer.availability[day][slot];
     const next = STATUSES[(STATUSES.indexOf(current) + 1) % STATUSES.length];
     const availability = {
@@ -181,12 +186,13 @@ function ProfilePage() {
   };
 
   const saveNotes = () => {
-    if (!notesDirty) return;
+    if (!isAdmin || !notesDirty) return;
     updateTrainer(trainer.id, { notes });
     setNotesDirty(false);
   };
 
   const onPhotoPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isAdmin) { e.target.value = ""; return; }
     const file = e.target.files?.[0];
     if (!file) return;
     try {
@@ -217,25 +223,33 @@ function ProfilePage() {
           <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
             <History className="h-4 w-4" /> Version history
           </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /> Delete Trainer</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete {trainer.fullName}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This permanently removes the trainer record. Prior version snapshots will also be deleted. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {isAdmin && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /> Delete Trainer</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {trainer.fullName}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This permanently removes the trainer record. Prior version snapshots will also be deleted. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </div>
+
+      {!isAdmin && (
+        <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+          You are viewing this record in read-only mode. <RouterLink to="/auth" className="text-primary hover:underline">Sign in as an admin</RouterLink> to make changes.
+        </div>
+      )}
 
       {(expiringSoon || trainer.status === "On Leave") && (
         <div className="rounded-lg border border-warning/40 bg-[color:var(--warning)]/10 p-3 flex items-start gap-2 text-sm">
@@ -252,21 +266,25 @@ function ProfilePage() {
       <div className="bg-card border rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
         <div className="relative group">
           <img src={trainer.photo} alt={trainer.fullName} className="h-20 w-20 rounded-full object-cover ring-2 ring-primary/20" />
-          <button
-            type="button"
-            onClick={() => photoInputRef.current?.click()}
-            className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-            aria-label="Change photo"
-          >
-            <Camera className="h-5 w-5" />
-          </button>
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={onPhotoPick}
-          />
+          {isAdmin && (
+            <>
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label="Change photo"
+              >
+                <Camera className="h-5 w-5" />
+              </button>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={onPhotoPick}
+              />
+            </>
+          )}
         </div>
         <div className="flex-1">
           <h1 className="text-2xl font-semibold">{trainer.fullName}</h1>
@@ -281,9 +299,11 @@ function ProfilePage() {
               "bg-muted text-muted-foreground"
             }`}>{trainer.status}</span>
           </div>
-          <Button variant="ghost" size="sm" className="mt-2 -ml-2 h-7 text-xs" onClick={() => photoInputRef.current?.click()}>
-            <Camera className="h-3.5 w-3.5" /> Change photo
-          </Button>
+          {isAdmin && (
+            <Button variant="ghost" size="sm" className="mt-2 -ml-2 h-7 text-xs" onClick={() => photoInputRef.current?.click()}>
+              <Camera className="h-3.5 w-3.5" /> Change photo
+            </Button>
+          )}
         </div>
       </div>
 
@@ -292,7 +312,7 @@ function ProfilePage() {
           title="Personal Information"
           icon={Mail}
           editing={editing === "personal"}
-          onEdit={() => startEdit("personal")}
+          onEdit={() => startEdit("personal")} canEdit={isAdmin}
           onCancel={cancelEdit}
           onSave={() => saveEdit({
             fullName: d.fullName, email: d.email, phone: d.phone, address: d.address, position: d.position, status: d.status,
@@ -329,7 +349,7 @@ function ProfilePage() {
           title="Academic Background"
           icon={GraduationCap}
           editing={editing === "academic"}
-          onEdit={() => startEdit("academic")}
+          onEdit={() => startEdit("academic")} canEdit={isAdmin}
           onCancel={cancelEdit}
           onSave={() => saveEdit({ academic: d.academic })}
         >
@@ -352,7 +372,7 @@ function ProfilePage() {
           title="English Profile"
           icon={Languages}
           editing={editing === "english"}
-          onEdit={() => startEdit("english")}
+          onEdit={() => startEdit("english")} canEdit={isAdmin}
           onCancel={cancelEdit}
           onSave={() => saveEdit({ english: d.english })}
         >
@@ -381,7 +401,7 @@ function ProfilePage() {
           title="Performance (latest)"
           icon={Star}
           editing={editing === "performance"}
-          onEdit={() => startEdit("performance")}
+          onEdit={() => startEdit("performance")} canEdit={isAdmin}
           onCancel={cancelEdit}
           onSave={() => saveEdit({ performance: d.performance })}
         >
@@ -417,7 +437,7 @@ function ProfilePage() {
           title="Contract"
           icon={FileText}
           editing={editing === "contract"}
-          onEdit={() => startEdit("contract")}
+          onEdit={() => startEdit("contract")} canEdit={isAdmin}
           onCancel={cancelEdit}
           onSave={() => saveEdit({ contract: { ...d.contract } })}
         >
@@ -445,7 +465,7 @@ function ProfilePage() {
           title="Leave"
           icon={Calendar}
           editing={editing === "leave"}
-          onEdit={() => startEdit("leave")}
+          onEdit={() => startEdit("leave")} canEdit={isAdmin}
           onCancel={cancelEdit}
           onSave={() => saveEdit({ leave: d.leave })}
         >
@@ -478,7 +498,9 @@ function ProfilePage() {
       </div>
 
       <Section title="Weekly Availability" icon={Calendar}>
-        <p className="text-xs text-muted-foreground mb-3">Click a cell to cycle: Available → Teaching → Leave → Unavailable</p>
+        <p className="text-xs text-muted-foreground mb-3">
+          {isAdmin ? "Click a cell to cycle: Available → Teaching → Leave → Unavailable" : "Read-only view. Sign in as admin to edit."}
+        </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-separate border-spacing-1">
             <thead>
@@ -499,7 +521,8 @@ function ProfilePage() {
                       <td key={day} className="p-0">
                         <button
                           onClick={() => cycleSlot(day, slot)}
-                          className={`w-full px-2 py-2 rounded-md border text-xs font-medium transition-colors ${SLOT_TONE[status]}`}
+                          disabled={!isAdmin}
+                          className={`w-full px-2 py-2 rounded-md border text-xs font-medium transition-colors ${SLOT_TONE[status]} ${isAdmin ? "" : "cursor-default opacity-90"}`}
                         >
                           {status}
                         </button>
@@ -519,10 +542,13 @@ function ProfilePage() {
           onChange={(e) => { setNotes(e.target.value); setNotesDirty(true); }}
           onBlur={saveNotes}
           rows={4}
-          placeholder="Manager notes…"
-          className="w-full rounded-md border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          readOnly={!isAdmin}
+          placeholder={isAdmin ? "Manager notes…" : "No notes."}
+          className="w-full rounded-md border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-70"
         />
-        <div className="mt-2 text-xs text-muted-foreground">Notes save automatically when you click away.</div>
+        <div className="mt-2 text-xs text-muted-foreground">
+          {isAdmin ? "Notes save automatically when you click away." : "Read-only."}
+        </div>
       </Section>
 
       <HistoryDialog
@@ -530,6 +556,7 @@ function ProfilePage() {
         onOpenChange={setHistoryOpen}
         trainerId={trainer.id}
         trainerName={trainer.fullName}
+        canRestore={isAdmin}
       />
     </div>
   );
@@ -540,11 +567,13 @@ function HistoryDialog({
   onOpenChange,
   trainerId,
   trainerName,
+  canRestore,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   trainerId: string;
   trainerName: string;
+  canRestore: boolean;
 }) {
   const [versions, setVersions] = useState<TrainerVersion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -599,7 +628,7 @@ function HistoryDialog({
                       {v.data.fullName} · {v.data.position} · {v.data.status}
                     </div>
                   </div>
-                  {!isCurrent && (
+                  {!isCurrent && canRestore && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button size="sm" variant="outline" disabled={restoring === v.id}>
