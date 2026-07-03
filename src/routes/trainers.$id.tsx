@@ -499,7 +499,9 @@ function ProfilePage() {
       </div>
 
       <Section title="Weekly Availability" icon={Calendar}>
-        <p className="text-xs text-muted-foreground mb-3">Click a cell to cycle: Available → Teaching → Leave → Unavailable</p>
+        <p className="text-xs text-muted-foreground mb-3">
+          {isAdmin ? "Click a cell to cycle: Available → Teaching → Leave → Unavailable" : "Read-only view. Sign in as admin to edit."}
+        </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-separate border-spacing-1">
             <thead>
@@ -520,7 +522,8 @@ function ProfilePage() {
                       <td key={day} className="p-0">
                         <button
                           onClick={() => cycleSlot(day, slot)}
-                          className={`w-full px-2 py-2 rounded-md border text-xs font-medium transition-colors ${SLOT_TONE[status]}`}
+                          disabled={!isAdmin}
+                          className={`w-full px-2 py-2 rounded-md border text-xs font-medium transition-colors ${SLOT_TONE[status]} ${isAdmin ? "" : "cursor-default opacity-90"}`}
                         >
                           {status}
                         </button>
@@ -540,10 +543,13 @@ function ProfilePage() {
           onChange={(e) => { setNotes(e.target.value); setNotesDirty(true); }}
           onBlur={saveNotes}
           rows={4}
-          placeholder="Manager notes…"
-          className="w-full rounded-md border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          readOnly={!isAdmin}
+          placeholder={isAdmin ? "Manager notes…" : "No notes."}
+          className="w-full rounded-md border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-70"
         />
-        <div className="mt-2 text-xs text-muted-foreground">Notes save automatically when you click away.</div>
+        <div className="mt-2 text-xs text-muted-foreground">
+          {isAdmin ? "Notes save automatically when you click away." : "Read-only."}
+        </div>
       </Section>
 
       <HistoryDialog
@@ -551,6 +557,7 @@ function ProfilePage() {
         onOpenChange={setHistoryOpen}
         trainerId={trainer.id}
         trainerName={trainer.fullName}
+        canRestore={isAdmin}
       />
     </div>
   );
