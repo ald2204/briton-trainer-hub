@@ -13,6 +13,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import sbiLogo from "../assets/logo-sbi.png.asset.json";
 import britonLogo from "../assets/logo-briton.png.asset.json";
+import { useAuth, signOut } from "@/lib/auth";
+import { LogIn, LogOut, ShieldCheck } from "lucide-react";
 
 function NotFoundComponent() {
   return (
@@ -131,6 +133,7 @@ function RootComponent() {
             <nav className="flex items-center gap-1">
               <NavLink to="/">Dashboard</NavLink>
               <NavLink to="/trainers">Trainers</NavLink>
+              <AuthNav />
             </nav>
           </div>
         </header>
