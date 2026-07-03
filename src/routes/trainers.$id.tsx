@@ -51,6 +51,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useAuth } from "@/lib/auth";
+import { Link as RouterLink } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/trainers/$id")({
   head: ({ params }) => ({
@@ -76,6 +78,7 @@ function Section({
   onEdit,
   onSave,
   onCancel,
+  canEdit = true,
   children,
 }: {
   title: string;
@@ -84,6 +87,7 @@ function Section({
   onEdit?: () => void;
   onSave?: () => void;
   onCancel?: () => void;
+  canEdit?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -93,7 +97,7 @@ function Section({
           <Icon className="h-4 w-4 text-primary" />
           <h2 className="font-semibold text-sm">{title}</h2>
         </div>
-        {onEdit && (
+        {onEdit && canEdit && (
           editing ? (
             <div className="flex items-center gap-1">
               <Button size="sm" variant="ghost" onClick={onCancel}><X className="h-4 w-4" /></Button>
@@ -131,6 +135,7 @@ function ProfilePage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { trainer, ready } = useTrainer(id);
+  const { isAdmin } = useAuth();
   const [draft, setDraft] = useState<Trainer | undefined>();
   const [editing, setEditing] = useState<SectionKey | null>(null);
   const [notes, setNotes] = useState("");
