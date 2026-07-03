@@ -52,7 +52,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
-import { Link as RouterLink } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/trainers/$id")({
   head: ({ params }) => ({
