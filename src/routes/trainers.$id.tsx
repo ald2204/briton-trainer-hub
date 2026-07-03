@@ -267,21 +267,25 @@ function ProfilePage() {
       <div className="bg-card border rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
         <div className="relative group">
           <img src={trainer.photo} alt={trainer.fullName} className="h-20 w-20 rounded-full object-cover ring-2 ring-primary/20" />
-          <button
-            type="button"
-            onClick={() => photoInputRef.current?.click()}
-            className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-            aria-label="Change photo"
-          >
-            <Camera className="h-5 w-5" />
-          </button>
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={onPhotoPick}
-          />
+          {isAdmin && (
+            <>
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label="Change photo"
+              >
+                <Camera className="h-5 w-5" />
+              </button>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={onPhotoPick}
+              />
+            </>
+          )}
         </div>
         <div className="flex-1">
           <h1 className="text-2xl font-semibold">{trainer.fullName}</h1>
@@ -296,9 +300,11 @@ function ProfilePage() {
               "bg-muted text-muted-foreground"
             }`}>{trainer.status}</span>
           </div>
-          <Button variant="ghost" size="sm" className="mt-2 -ml-2 h-7 text-xs" onClick={() => photoInputRef.current?.click()}>
-            <Camera className="h-3.5 w-3.5" /> Change photo
-          </Button>
+          {isAdmin && (
+            <Button variant="ghost" size="sm" className="mt-2 -ml-2 h-7 text-xs" onClick={() => photoInputRef.current?.click()}>
+              <Camera className="h-3.5 w-3.5" /> Change photo
+            </Button>
+          )}
         </div>
       </div>
 
