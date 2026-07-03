@@ -313,7 +313,7 @@ function ProfilePage() {
           title="Personal Information"
           icon={Mail}
           editing={editing === "personal"}
-          onEdit={() => startEdit("personal")}
+          onEdit={() => startEdit("personal")} canEdit={isAdmin}
           onCancel={cancelEdit}
           onSave={() => saveEdit({
             fullName: d.fullName, email: d.email, phone: d.phone, address: d.address, position: d.position, status: d.status,
@@ -350,7 +350,7 @@ function ProfilePage() {
           title="Academic Background"
           icon={GraduationCap}
           editing={editing === "academic"}
-          onEdit={() => startEdit("academic")}
+          onEdit={() => startEdit("academic")} canEdit={isAdmin}
           onCancel={cancelEdit}
           onSave={() => saveEdit({ academic: d.academic })}
         >
@@ -373,7 +373,7 @@ function ProfilePage() {
           title="English Profile"
           icon={Languages}
           editing={editing === "english"}
-          onEdit={() => startEdit("english")}
+          onEdit={() => startEdit("english")} canEdit={isAdmin}
           onCancel={cancelEdit}
           onSave={() => saveEdit({ english: d.english })}
         >
@@ -402,7 +402,7 @@ function ProfilePage() {
           title="Performance (latest)"
           icon={Star}
           editing={editing === "performance"}
-          onEdit={() => startEdit("performance")}
+          onEdit={() => startEdit("performance")} canEdit={isAdmin}
           onCancel={cancelEdit}
           onSave={() => saveEdit({ performance: d.performance })}
         >
@@ -438,7 +438,7 @@ function ProfilePage() {
           title="Contract"
           icon={FileText}
           editing={editing === "contract"}
-          onEdit={() => startEdit("contract")}
+          onEdit={() => startEdit("contract")} canEdit={isAdmin}
           onCancel={cancelEdit}
           onSave={() => saveEdit({ contract: { ...d.contract } })}
         >
@@ -466,7 +466,7 @@ function ProfilePage() {
           title="Leave"
           icon={Calendar}
           editing={editing === "leave"}
-          onEdit={() => startEdit("leave")}
+          onEdit={() => startEdit("leave")} canEdit={isAdmin}
           onCancel={cancelEdit}
           onSave={() => saveEdit({ leave: d.leave })}
         >
