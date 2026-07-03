@@ -568,11 +568,13 @@ function HistoryDialog({
   onOpenChange,
   trainerId,
   trainerName,
+  canRestore,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   trainerId: string;
   trainerName: string;
+  canRestore: boolean;
 }) {
   const [versions, setVersions] = useState<TrainerVersion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -627,7 +629,7 @@ function HistoryDialog({
                       {v.data.fullName} · {v.data.position} · {v.data.status}
                     </div>
                   </div>
-                  {!isCurrent && (
+                  {!isCurrent && canRestore && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button size="sm" variant="outline" disabled={restoring === v.id}>
