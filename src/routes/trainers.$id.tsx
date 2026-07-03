@@ -224,25 +224,33 @@ function ProfilePage() {
           <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
             <History className="h-4 w-4" /> Version history
           </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /> Delete Trainer</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete {trainer.fullName}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This permanently removes the trainer record. Prior version snapshots will also be deleted. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {isAdmin && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /> Delete Trainer</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {trainer.fullName}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This permanently removes the trainer record. Prior version snapshots will also be deleted. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </div>
+
+      {!isAdmin && (
+        <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+          You are viewing this record in read-only mode. <RouterLink to="/auth" className="text-primary hover:underline">Sign in as an admin</RouterLink> to make changes.
+        </div>
+      )}
 
       {(expiringSoon || trainer.status === "On Leave") && (
         <div className="rounded-lg border border-warning/40 bg-[color:var(--warning)]/10 p-3 flex items-start gap-2 text-sm">
