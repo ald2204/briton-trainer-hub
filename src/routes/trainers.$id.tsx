@@ -511,39 +511,15 @@ function ProfilePage() {
         <p className="text-xs text-muted-foreground mb-3">
           {isAdmin ? "Click a cell to cycle: Available → Teaching → Leave → Unavailable" : "Read-only view. Sign in as admin to edit."}
         </p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm border-separate border-spacing-1">
-            <thead>
-              <tr>
-                <th className="text-left text-xs uppercase tracking-wide text-muted-foreground p-2"></th>
-                {DAYS.map((day) => (
-                  <th key={day} className="text-xs uppercase tracking-wide text-muted-foreground p-2">{day}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {SLOTS.map((slot) => (
-                <tr key={slot}>
-                  <th className="text-left text-xs uppercase tracking-wide text-muted-foreground p-2 capitalize">{slot}</th>
-                  {DAYS.map((day) => {
-                    const status = trainer.availability[day][slot];
-                    return (
-                      <td key={day} className="p-0">
-                        <button
-                          onClick={() => cycleSlot(day, slot)}
-                          disabled={!isAdmin}
-                          className={`w-full px-2 py-2 rounded-md border text-xs font-medium transition-colors ${SLOT_TONE[status]} ${isAdmin ? "" : "cursor-default opacity-90"}`}
-                        >
-                          {status}
-                        </button>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <Section title="Monthly Availability" icon={Calendar}>
+        <p className="text-xs text-muted-foreground mb-3">
+          {isAdmin ? "Click a day to cycle: Available → Teaching → Leave → Unavailable" : "Read-only view. Sign in as admin to edit."}
+        </p>
+        <MonthlyCalendar
+          dateMap={trainer.dateAvailability ?? {}}
+          onCycle={cycleDate}
+          canEdit={isAdmin}
+        />
       </Section>
 
       <Section title="Notes" icon={StickyNote}>
