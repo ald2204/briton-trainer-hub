@@ -185,6 +185,16 @@ function ProfilePage() {
     updateTrainer(trainer.id, { availability });
   };
 
+  const cycleDate = (dateKey: string) => {
+    if (!isAdmin) return;
+    const current = (trainer.dateAvailability?.[dateKey] ?? "Unavailable") as SlotStatus;
+    const next = STATUSES[(STATUSES.indexOf(current) + 1) % STATUSES.length];
+    const map = { ...(trainer.dateAvailability ?? {}) };
+    if (next === "Unavailable") delete map[dateKey];
+    else map[dateKey] = next;
+    updateTrainer(trainer.id, { dateAvailability: map });
+  };
+
   const saveNotes = () => {
     if (!isAdmin || !notesDirty) return;
     updateTrainer(trainer.id, { notes });
