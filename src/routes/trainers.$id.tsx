@@ -507,10 +507,6 @@ function ProfilePage() {
         </Section>
       </div>
 
-      <Section title="Weekly Availability" icon={Calendar}>
-        <p className="text-xs text-muted-foreground mb-3">
-          {isAdmin ? "Click a cell to cycle: Available → Teaching → Leave → Unavailable" : "Read-only view. Sign in as admin to edit."}
-        </p>
       <Section title="Monthly Availability" icon={Calendar}>
         <p className="text-xs text-muted-foreground mb-3">
           {isAdmin ? "Click a day to cycle: Available → Teaching → Leave → Unavailable" : "Read-only view. Sign in as admin to edit."}
