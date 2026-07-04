@@ -164,9 +164,18 @@ function AuthNav() {
   return (
     <div className="ml-2 flex items-center gap-2">
       {isAdmin && (
-        <span className="hidden sm:inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-primary-soft text-primary">
-          <ShieldCheck className="h-3 w-3" /> Admin
-        </span>
+        <>
+          <Link
+            to="/admin"
+            className="hidden sm:inline-flex px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            activeProps={{ className: "px-3 py-2 rounded-md text-sm font-medium bg-primary-soft text-primary" }}
+          >
+            Admin
+          </Link>
+          <span className="hidden sm:inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-primary-soft text-primary">
+            <ShieldCheck className="h-3 w-3" /> Admin
+          </span>
+        </>
       )}
       <span className="hidden md:inline text-xs text-muted-foreground max-w-[10rem] truncate">{user.email}</span>
       <button
