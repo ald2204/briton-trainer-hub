@@ -247,7 +247,7 @@ function ProfilePage() {
 
       {!isAdmin && (
         <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
-          You are viewing this record in read-only mode. <RouterLink to="/auth" className="text-primary hover:underline">Sign in as an admin</RouterLink> to make changes.
+          You are viewing this record in read-only mode. <Link to="/auth" className="text-primary hover:underline">Sign in as an admin</Link> to make changes.
         </div>
       )}
 
