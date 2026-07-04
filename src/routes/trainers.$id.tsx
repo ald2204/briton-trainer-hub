@@ -640,3 +640,115 @@ function HistoryDialog({
     </Dialog>
   );
 }
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+const WEEK_HEADERS: DayKey[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function toDateKey(y: number, m: number, d: number) {
+  const mm = String(m + 1).padStart(2, "0");
+  const dd = String(d).padStart(2, "0");
+  return `${y}-${mm}-${dd}`;
+}
+
+function MonthlyCalendar({
+  dateMap,
+  onCycle,
+  canEdit,
+}: {
+  dateMap: Record<string, SlotStatus>;
+  onCycle: (dateKey: string) => void;
+  canEdit: boolean;
+}) {
+  const today = new Date();
+  const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
+  const todayKey = toDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+  const firstDay = new Date(cursor.year, cursor.month, 1);
+  const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
+  // Convert JS Sunday=0 to Monday=0 leading offset
+  const leading = (firstDay.getDay() + 6) % 7;
+  const totalCells = Math.ceil((leading + daysInMonth) / 7) * 7;
+
+  const goto = (delta: number) => {
+    const d = new Date(cursor.year, cursor.month + delta, 1);
+    setCursor({ year: d.getFullYear(), month: d.getMonth() });
+  };
+
+  const cells: Array<{ key: string; day: number; status: SlotStatus; isToday: boolean } | null> = [];
+  for (let i = 0; i < totalCells; i++) {
+    const dayNum = i - leading + 1;
+    if (dayNum < 1 || dayNum > daysInMonth) {
+      cells.push(null);
+    } else {
+      const key = toDateKey(cursor.year, cursor.month, dayNum);
+      cells.push({
+        key,
+        day: dayNum,
+        status: (dateMap[key] ?? "Unavailable") as SlotStatus,
+        isToday: key === todayKey,
+      });
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={() => goto(-1)} aria-label="Previous month">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="text-sm font-semibold min-w-[10rem] text-center">
+            {MONTH_NAMES[cursor.month]} {cursor.year}
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => goto(1)} aria-label="Next month">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCursor({ year: today.getFullYear(), month: today.getMonth() })}
+        >
+          Today
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1">
+        {WEEK_HEADERS.map((h) => (
+          <div key={h} className="text-center text-[11px] uppercase tracking-wide text-muted-foreground py-1">
+            {h}
+          </div>
+        ))}
+        {cells.map((c, i) => {
+          if (!c) return <div key={`e-${i}`} className="aspect-square rounded-md bg-transparent" />;
+          return (
+            <button
+              key={c.key}
+              onClick={() => onCycle(c.key)}
+              disabled={!canEdit}
+              className={`aspect-square rounded-md border text-[11px] font-medium flex flex-col items-center justify-center gap-0.5 transition-colors ${SLOT_TONE[c.status]} ${canEdit ? "hover:opacity-80" : "cursor-default"} ${c.isToday ? "ring-2 ring-primary" : ""}`}
+              title={`${c.key} · ${c.status}`}
+            >
+              <span className="text-sm font-semibold leading-none">{c.day}</span>
+              <span className="text-[10px] leading-none opacity-80 truncate max-w-full px-1">
+                {c.status === "Unavailable" ? "" : c.status}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground pt-1">
+        {STATUSES.map((s) => (
+          <span key={s} className="inline-flex items-center gap-1.5">
+            <span className={`inline-block h-3 w-3 rounded-sm border ${SLOT_TONE[s]}`} />
+            {s}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
