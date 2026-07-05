@@ -169,24 +169,12 @@ function ProfilePage() {
     setDraft(undefined);
   };
 
-  const cycleSlot = (day: DayKey, slot: SlotKey) => {
+  const setDateText = (dateKey: string, text: string) => {
     if (!isAdmin) return;
-    const current = trainer.availability[day][slot];
-    const next = STATUSES[(STATUSES.indexOf(current) + 1) % STATUSES.length];
-    const availability = {
-      ...trainer.availability,
-      [day]: { ...trainer.availability[day], [slot]: next },
-    };
-    updateTrainer(trainer.id, { availability });
-  };
-
-  const cycleDate = (dateKey: string) => {
-    if (!isAdmin) return;
-    const current = (trainer.dateAvailability?.[dateKey] ?? "Unavailable") as SlotStatus;
-    const next = STATUSES[(STATUSES.indexOf(current) + 1) % STATUSES.length];
     const map = { ...(trainer.dateAvailability ?? {}) };
-    if (next === "Unavailable") delete map[dateKey];
-    else map[dateKey] = next;
+    const trimmed = text.trim();
+    if (!trimmed) delete map[dateKey];
+    else map[dateKey] = trimmed;
     updateTrainer(trainer.id, { dateAvailability: map });
   };
 
