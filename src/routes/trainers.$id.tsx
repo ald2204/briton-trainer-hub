@@ -62,13 +62,7 @@ export const Route = createFileRoute("/trainers/$id")({
   component: ProfilePage,
 });
 
-const SLOT_TONE: Record<SlotStatus, string> = {
-  Available: "bg-[color:var(--success)]/15 text-[color:var(--success)] border-[color:var(--success)]/30",
-  Teaching: "bg-primary-soft text-primary border-primary/30",
-  Leave: "bg-[color:var(--warning)]/20 text-[color:var(--warning-foreground)] border-[color:var(--warning)]/40",
-  Unavailable: "bg-muted text-muted-foreground border-border",
-};
-const STATUSES: SlotStatus[] = ["Available", "Teaching", "Leave", "Unavailable"];
+type SectionKey = "personal" | "academic" | "english" | "performance" | "contract" | "leave";
 
 type SectionKey = "personal" | "academic" | "english" | "performance" | "contract" | "leave";
 
