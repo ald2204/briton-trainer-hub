@@ -492,11 +492,11 @@ function ProfilePage() {
 
       <Section title="Monthly Availability" icon={Calendar}>
         <p className="text-xs text-muted-foreground mb-3">
-          {isAdmin ? "Click a day to cycle: Available → Teaching → Leave → Unavailable" : "Read-only view. Sign in as admin to edit."}
+          {isAdmin ? "Click a day to add or edit a note for that date." : "Read-only view. Sign in as admin to edit."}
         </p>
         <MonthlyCalendar
           dateMap={trainer.dateAvailability ?? {}}
-          onCycle={cycleDate}
+          onSetText={setDateText}
           canEdit={isAdmin}
         />
       </Section>
