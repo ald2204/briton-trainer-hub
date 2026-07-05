@@ -62,7 +62,6 @@ export const Route = createFileRoute("/trainers/$id")({
   component: ProfilePage,
 });
 
-type SectionKey = "personal" | "academic" | "english" | "performance" | "contract" | "leave";
 
 type SectionKey = "personal" | "academic" | "english" | "performance" | "contract" | "leave";
 
