@@ -12,6 +12,7 @@ import {
   CalendarCheck2,
   AlertTriangle,
   ArrowRight,
+  CalendarDays,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
