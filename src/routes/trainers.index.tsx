@@ -67,7 +67,16 @@ function TrainersPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Trainers</h1>
           <p className="text-sm text-muted-foreground mt-1">{filtered.length} of {trainers.length} shown</p>
         </div>
-        {isAdmin && <AddTrainerDialog />}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => exportTrainersToExcel(filtered)}
+            disabled={filtered.length === 0}
+          >
+            <Download className="h-4 w-4" /> Export Excel
+          </Button>
+          {isAdmin && <AddTrainerDialog />}
+        </div>
       </div>
 
       <div className="bg-card border rounded-xl p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
