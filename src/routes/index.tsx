@@ -67,6 +67,17 @@ function Dashboard() {
   });
   const available = trainers.filter(isAvailableForAssignment).length;
 
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayLabel = new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const todayAgenda = trainers
+    .map((t) => ({ trainer: t, note: t.dateAvailability?.[todayKey]?.trim() ?? "" }))
+    .filter((x) => x.note.length > 0);
+
   return (
     <div className="space-y-8">
       <div>
