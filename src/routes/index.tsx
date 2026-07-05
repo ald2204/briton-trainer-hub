@@ -104,12 +104,12 @@ function Dashboard() {
             All trainers <ArrowRight className="h-3 w-3" />
           </Link>
         </header>
-        <ul className="divide-y">
+        <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5">
           {todayAgenda.length === 0 && (
-            <li className="p-5 text-sm text-muted-foreground">No agenda entries for today.</li>
+            <li className="col-span-full text-sm text-muted-foreground">No agenda entries for today.</li>
           )}
           {todayAgenda.map(({ trainer: t, note }) => (
-            <li key={t.id} className="p-4 flex items-start gap-3">
+            <li key={t.id} className="border rounded-lg p-4 flex items-start gap-3">
               <img src={t.photo} alt={t.fullName} className="h-10 w-10 rounded-full object-cover" />
               <div className="flex-1 min-w-0">
                 <Link to="/trainers/$id" params={{ id: t.id }} className="font-medium hover:text-primary truncate block">
