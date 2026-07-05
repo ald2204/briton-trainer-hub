@@ -638,20 +638,21 @@ function toDateKey(y: number, m: number, d: number) {
 
 function MonthlyCalendar({
   dateMap,
-  onCycle,
+  onSetText,
   canEdit,
 }: {
-  dateMap: Record<string, SlotStatus>;
-  onCycle: (dateKey: string) => void;
+  dateMap: Record<string, string>;
+  onSetText: (dateKey: string, text: string) => void;
   canEdit: boolean;
 }) {
   const today = new Date();
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [draftText, setDraftText] = useState("");
   const todayKey = toDateKey(today.getFullYear(), today.getMonth(), today.getDate());
 
   const firstDay = new Date(cursor.year, cursor.month, 1);
   const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
-  // Convert JS Sunday=0 to Monday=0 leading offset
   const leading = (firstDay.getDay() + 6) % 7;
   const totalCells = Math.ceil((leading + daysInMonth) / 7) * 7;
 
@@ -660,7 +661,18 @@ function MonthlyCalendar({
     setCursor({ year: d.getFullYear(), month: d.getMonth() });
   };
 
-  const cells: Array<{ key: string; day: number; status: SlotStatus; isToday: boolean } | null> = [];
+  const openEditor = (key: string) => {
+    if (!canEdit) return;
+    setEditingKey(key);
+    setDraftText(dateMap[key] ?? "");
+  };
+
+  const saveEditor = () => {
+    if (editingKey) onSetText(editingKey, draftText);
+    setEditingKey(null);
+  };
+
+  const cells: Array<{ key: string; day: number; text: string; isToday: boolean } | null> = [];
   for (let i = 0; i < totalCells; i++) {
     const dayNum = i - leading + 1;
     if (dayNum < 1 || dayNum > daysInMonth) {
@@ -670,7 +682,7 @@ function MonthlyCalendar({
       cells.push({
         key,
         day: dayNum,
-        status: (dateMap[key] ?? "Unavailable") as SlotStatus,
+        text: dateMap[key] ?? "",
         isToday: key === todayKey,
       });
     }
@@ -706,32 +718,48 @@ function MonthlyCalendar({
           </div>
         ))}
         {cells.map((c, i) => {
-          if (!c) return <div key={`e-${i}`} className="aspect-square rounded-md bg-transparent" />;
+          if (!c) return <div key={`e-${i}`} className="min-h-20 rounded-md bg-transparent" />;
+          const hasText = c.text.length > 0;
           return (
             <button
               key={c.key}
-              onClick={() => onCycle(c.key)}
+              onClick={() => openEditor(c.key)}
               disabled={!canEdit}
-              className={`aspect-square rounded-md border text-[11px] font-medium flex flex-col items-center justify-center gap-0.5 transition-colors ${SLOT_TONE[c.status]} ${canEdit ? "hover:opacity-80" : "cursor-default"} ${c.isToday ? "ring-2 ring-primary" : ""}`}
-              title={`${c.key} · ${c.status}`}
+              className={`min-h-20 rounded-md border p-1.5 flex flex-col items-start gap-1 text-left transition-colors ${
+                hasText ? "bg-primary-soft border-primary/30" : "bg-card border-border"
+              } ${canEdit ? "hover:border-primary hover:bg-primary-soft/60 cursor-pointer" : "cursor-default"} ${
+                c.isToday ? "ring-2 ring-primary" : ""
+              }`}
+              title={c.key}
             >
-              <span className="text-sm font-semibold leading-none">{c.day}</span>
-              <span className="text-[10px] leading-none opacity-80 truncate max-w-full px-1">
-                {c.status === "Unavailable" ? "" : c.status}
+              <span className="text-xs font-semibold leading-none">{c.day}</span>
+              <span className="text-[11px] leading-tight text-foreground/80 whitespace-pre-wrap break-words w-full line-clamp-3">
+                {c.text}
               </span>
             </button>
           );
         })}
       </div>
 
-      <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground pt-1">
-        {STATUSES.map((s) => (
-          <span key={s} className="inline-flex items-center gap-1.5">
-            <span className={`inline-block h-3 w-3 rounded-sm border ${SLOT_TONE[s]}`} />
-            {s}
-          </span>
-        ))}
-      </div>
+      <Dialog open={!!editingKey} onOpenChange={(v) => { if (!v) setEditingKey(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit note — {editingKey}</DialogTitle>
+          </DialogHeader>
+          <textarea
+            value={draftText}
+            onChange={(e) => setDraftText(e.target.value)}
+            rows={5}
+            autoFocus
+            placeholder="Enter note for this date…"
+            className="w-full rounded-md border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setEditingKey(null)}>Cancel</Button>
+            <Button onClick={saveEditor}>Save</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
