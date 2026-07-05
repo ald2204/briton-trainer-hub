@@ -24,7 +24,7 @@ export interface Trainer {
   contract: { startDate: string; endDate: string };
   leave: { entitlement: number; taken: number; currentLeave?: { from: string; to: string } };
   availability: Availability;
-  dateAvailability?: Record<string, SlotStatus>;
+  dateAvailability?: Record<string, string>;
   notes: string;
 }
 
