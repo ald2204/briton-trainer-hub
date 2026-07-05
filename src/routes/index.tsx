@@ -12,6 +12,7 @@ import {
   CalendarCheck2,
   AlertTriangle,
   ArrowRight,
+  CalendarDays,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -66,6 +67,17 @@ function Dashboard() {
   });
   const available = trainers.filter(isAvailableForAssignment).length;
 
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayLabel = new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const todayAgenda = trainers
+    .map((t) => ({ trainer: t, note: t.dateAvailability?.[todayKey]?.trim() ?? "" }))
+    .filter((x) => x.note.length > 0);
+
   return (
     <div className="space-y-8">
       <div>
@@ -80,6 +92,36 @@ function Dashboard() {
         <Stat icon={CalendarClock} label="Contract <90d" value={expiringSoon.length} tone="destructive" />
         <Stat icon={CalendarCheck2} label="Available" value={available} tone="primary" />
       </div>
+
+      <section className="bg-card border rounded-xl">
+        <header className="flex items-center justify-between p-5 border-b">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold">Today's agenda</h2>
+            <span className="text-xs text-muted-foreground">· {todayLabel}</span>
+          </div>
+          <Link to="/trainers" className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+            All trainers <ArrowRight className="h-3 w-3" />
+          </Link>
+        </header>
+        <ul className="divide-y">
+          {todayAgenda.length === 0 && (
+            <li className="p-5 text-sm text-muted-foreground">No agenda entries for today.</li>
+          )}
+          {todayAgenda.map(({ trainer: t, note }) => (
+            <li key={t.id} className="p-4 flex items-start gap-3">
+              <img src={t.photo} alt={t.fullName} className="h-10 w-10 rounded-full object-cover" />
+              <div className="flex-1 min-w-0">
+                <Link to="/trainers/$id" params={{ id: t.id }} className="font-medium hover:text-primary truncate block">
+                  {t.fullName}
+                </Link>
+                <div className="text-xs text-muted-foreground">{t.position}</div>
+                <p className="text-sm mt-1 whitespace-pre-wrap">{note}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="bg-card border rounded-xl">
