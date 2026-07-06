@@ -172,7 +172,7 @@ function ProfilePage() {
   };
 
   const setDateText = (dateKey: string, text: string) => {
-    if (!isAdmin) return;
+    if (!canEdit) return;
     const map = { ...(trainer.dateAvailability ?? {}) };
     const trimmed = text.trim();
     if (!trimmed) delete map[dateKey];
@@ -181,13 +181,13 @@ function ProfilePage() {
   };
 
   const saveNotes = () => {
-    if (!isAdmin || !notesDirty) return;
+    if (!canEdit || !notesDirty) return;
     updateTrainer(trainer.id, { notes });
     setNotesDirty(false);
   };
 
   const onPhotoPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!isAdmin) { e.target.value = ""; return; }
+    if (!canEdit) { e.target.value = ""; return; }
     const file = e.target.files?.[0];
     if (!file) return;
     try {
@@ -240,7 +240,7 @@ function ProfilePage() {
         </div>
       </div>
 
-      {!isAdmin && (
+      {!canEdit && (
         <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
           You are viewing this record in read-only mode. <Link to="/auth" className="text-primary hover:underline">Sign in as an admin</Link> to make changes.
         </div>
@@ -261,7 +261,7 @@ function ProfilePage() {
       <div className="bg-card border rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
         <div className="relative group">
           <img src={trainer.photo} alt={trainer.fullName} className="h-20 w-20 rounded-full object-cover ring-2 ring-primary/20" />
-          {isAdmin && (
+          {canEdit && (
             <>
               <button
                 type="button"
@@ -294,7 +294,7 @@ function ProfilePage() {
               "bg-muted text-muted-foreground"
             }`}>{trainer.status}</span>
           </div>
-          {isAdmin && (
+          {canEdit && (
             <Button variant="ghost" size="sm" className="mt-2 -ml-2 h-7 text-xs" onClick={() => photoInputRef.current?.click()}>
               <Camera className="h-3.5 w-3.5" /> Change photo
             </Button>
@@ -307,7 +307,7 @@ function ProfilePage() {
           title="Personal Information"
           icon={Mail}
           editing={editing === "personal"}
-          onEdit={() => startEdit("personal")} canEdit={isAdmin}
+          onEdit={() => startEdit("personal")} canEdit={canEdit}
           onCancel={cancelEdit}
           onSave={() => saveEdit({
             fullName: d.fullName, email: d.email, phone: d.phone, address: d.address, position: d.position, status: d.status,
@@ -344,7 +344,7 @@ function ProfilePage() {
           title="Academic Background"
           icon={GraduationCap}
           editing={editing === "academic"}
-          onEdit={() => startEdit("academic")} canEdit={isAdmin}
+          onEdit={() => startEdit("academic")} canEdit={canEdit}
           onCancel={cancelEdit}
           onSave={() => saveEdit({ academic: d.academic })}
         >
@@ -367,7 +367,7 @@ function ProfilePage() {
           title="English Profile"
           icon={Languages}
           editing={editing === "english"}
-          onEdit={() => startEdit("english")} canEdit={isAdmin}
+          onEdit={() => startEdit("english")} canEdit={canEdit}
           onCancel={cancelEdit}
           onSave={() => saveEdit({ english: d.english })}
         >
@@ -396,7 +396,7 @@ function ProfilePage() {
           title="Performance (latest)"
           icon={Star}
           editing={editing === "performance"}
-          onEdit={() => startEdit("performance")} canEdit={isAdmin}
+          onEdit={() => startEdit("performance")} canEdit={canEdit}
           onCancel={cancelEdit}
           onSave={() => saveEdit({ performance: d.performance })}
         >
@@ -432,7 +432,7 @@ function ProfilePage() {
           title="Contract"
           icon={FileText}
           editing={editing === "contract"}
-          onEdit={() => startEdit("contract")} canEdit={isAdmin}
+          onEdit={() => startEdit("contract")} canEdit={canEdit}
           onCancel={cancelEdit}
           onSave={() => saveEdit({ contract: { ...d.contract } })}
         >
@@ -460,7 +460,7 @@ function ProfilePage() {
           title="Leave"
           icon={Calendar}
           editing={editing === "leave"}
-          onEdit={() => startEdit("leave")} canEdit={isAdmin}
+          onEdit={() => startEdit("leave")} canEdit={canEdit}
           onCancel={cancelEdit}
           onSave={() => saveEdit({ leave: d.leave })}
         >
@@ -494,12 +494,12 @@ function ProfilePage() {
 
       <Section title="Monthly Availability" icon={Calendar}>
         <p className="text-xs text-muted-foreground mb-3">
-          {isAdmin ? "Click a day to add or edit a note for that date." : "Read-only view. Sign in as admin to edit."}
+          {canEdit ? "Click a day to add or edit a note for that date." : "Read-only view. Sign in as admin to edit."}
         </p>
         <MonthlyCalendar
           dateMap={trainer.dateAvailability ?? {}}
           onSetText={setDateText}
-          canEdit={isAdmin}
+          canEdit={canEdit}
         />
       </Section>
 
@@ -509,12 +509,12 @@ function ProfilePage() {
           onChange={(e) => { setNotes(e.target.value); setNotesDirty(true); }}
           onBlur={saveNotes}
           rows={4}
-          readOnly={!isAdmin}
-          placeholder={isAdmin ? "Manager notes…" : "No notes."}
+          readOnly={!canEdit}
+          placeholder={canEdit ? "Manager notes…" : "No notes."}
           className="w-full rounded-md border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-70"
         />
         <div className="mt-2 text-xs text-muted-foreground">
-          {isAdmin ? "Notes save automatically when you click away." : "Read-only."}
+          {canEdit ? "Notes save automatically when you click away." : "Read-only."}
         </div>
       </Section>
 
