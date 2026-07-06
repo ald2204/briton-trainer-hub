@@ -113,19 +113,53 @@ function Dashboard() {
             <li className="col-span-full text-sm text-muted-foreground">No agenda entries for today.</li>
           )}
           {todayAgenda.map(({ trainer: t, note }) => (
-            <li key={t.id} className="border rounded-lg p-4 flex items-start gap-3">
-              <img src={t.photo} alt={t.fullName} className="h-10 w-10 rounded-full object-cover" />
-              <div className="flex-1 min-w-0">
-                <Link to="/trainers/$id" params={{ id: t.id }} className="font-medium hover:text-primary truncate block">
-                  {t.fullName}
-                </Link>
-                <div className="text-xs text-muted-foreground">{t.position}</div>
-                <p className="text-sm mt-1 whitespace-pre-wrap">{note}</p>
-              </div>
+            <li key={t.id}>
+              <button
+                type="button"
+                onClick={() => setOpenAgenda({ trainer: t, note })}
+                className="w-full text-left border rounded-lg p-4 flex items-start gap-3 hover:bg-accent/40 transition-colors"
+              >
+                <img src={t.photo} alt={t.fullName} className="h-10 w-10 rounded-full object-cover shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{t.fullName}</div>
+                  <div className="text-xs text-muted-foreground truncate">{t.position}</div>
+                  <p className="text-sm mt-1 line-clamp-2 whitespace-pre-wrap">{note}</p>
+                </div>
+              </button>
             </li>
           ))}
         </ul>
       </section>
+
+      <Dialog open={!!openAgenda} onOpenChange={(o) => !o && setOpenAgenda(null)}>
+        <DialogContent className="max-w-lg">
+          {openAgenda && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-3">
+                  <img src={openAgenda.trainer.photo} alt={openAgenda.trainer.fullName} className="h-10 w-10 rounded-full object-cover" />
+                  <div className="min-w-0">
+                    <div className="truncate">{openAgenda.trainer.fullName}</div>
+                    <div className="text-xs font-normal text-muted-foreground truncate">{openAgenda.trainer.position}</div>
+                  </div>
+                </DialogTitle>
+              </DialogHeader>
+              <div className="text-xs text-muted-foreground">{todayLabel}</div>
+              <p className="text-sm whitespace-pre-wrap max-h-[60vh] overflow-y-auto">{openAgenda.note}</p>
+              <div className="flex justify-end">
+                <Link
+                  to="/trainers/$id"
+                  params={{ id: openAgenda.trainer.id }}
+                  className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                  onClick={() => setOpenAgenda(null)}
+                >
+                  Open profile <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="bg-card border rounded-xl">
