@@ -60,6 +60,7 @@ function Stat({
 
 function Dashboard() {
   const { trainers } = useTrainers();
+  const [openAgenda, setOpenAgenda] = useState<{ trainer: Trainer; note: string } | null>(null);
 
   const total = trainers.length;
   const active = trainers.filter((t) => t.status === "Active").length;
