@@ -242,7 +242,7 @@ function ProfilePage() {
 
       {!canEdit && (
         <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
-          You are viewing this record in read-only mode. <Link to="/auth" className="text-primary hover:underline">Sign in as an admin</Link> to make changes.
+          You are viewing this record in read-only mode. Only the trainer themselves or an admin can edit it. <Link to="/auth" className="text-primary hover:underline">Sign in</Link> if this is your profile.
         </div>
       )}
 
