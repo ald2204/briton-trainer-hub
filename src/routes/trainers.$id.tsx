@@ -648,6 +648,7 @@ function MonthlyCalendar({
   const today = new Date();
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [viewingKey, setViewingKey] = useState<string | null>(null);
   const [draftText, setDraftText] = useState("");
   const todayKey = toDateKey(today.getFullYear(), today.getMonth(), today.getDate());
 
@@ -661,10 +662,13 @@ function MonthlyCalendar({
     setCursor({ year: d.getFullYear(), month: d.getMonth() });
   };
 
-  const openEditor = (key: string) => {
-    if (!canEdit) return;
-    setEditingKey(key);
-    setDraftText(dateMap[key] ?? "");
+  const openCell = (key: string, text: string) => {
+    if (canEdit) {
+      setEditingKey(key);
+      setDraftText(dateMap[key] ?? "");
+    } else if (text.length > 0) {
+      setViewingKey(key);
+    }
   };
 
   const saveEditor = () => {
