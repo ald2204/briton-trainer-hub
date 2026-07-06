@@ -648,6 +648,7 @@ function MonthlyCalendar({
   const today = new Date();
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [viewingKey, setViewingKey] = useState<string | null>(null);
   const [draftText, setDraftText] = useState("");
   const todayKey = toDateKey(today.getFullYear(), today.getMonth(), today.getDate());
 
@@ -661,10 +662,13 @@ function MonthlyCalendar({
     setCursor({ year: d.getFullYear(), month: d.getMonth() });
   };
 
-  const openEditor = (key: string) => {
-    if (!canEdit) return;
-    setEditingKey(key);
-    setDraftText(dateMap[key] ?? "");
+  const openCell = (key: string, text: string) => {
+    if (canEdit) {
+      setEditingKey(key);
+      setDraftText(dateMap[key] ?? "");
+    } else if (text.length > 0) {
+      setViewingKey(key);
+    }
   };
 
   const saveEditor = () => {
@@ -723,11 +727,11 @@ function MonthlyCalendar({
           return (
             <button
               key={c.key}
-              onClick={() => openEditor(c.key)}
-              disabled={!canEdit}
+              onClick={() => openCell(c.key, c.text)}
+              disabled={!canEdit && !hasText}
               className={`min-h-20 rounded-md border p-1.5 flex flex-col items-start gap-1 text-left transition-colors ${
                 hasText ? "bg-primary-soft border-primary/30" : "bg-card border-border"
-              } ${canEdit ? "hover:border-primary hover:bg-primary-soft/60 cursor-pointer" : "cursor-default"} ${
+              } ${canEdit || hasText ? "hover:border-primary hover:bg-primary-soft/60 cursor-pointer" : "cursor-default"} ${
                 c.isToday ? "ring-2 ring-primary" : ""
               }`}
               title={c.key}
@@ -758,6 +762,17 @@ function MonthlyCalendar({
             <Button variant="ghost" onClick={() => setEditingKey(null)}>Cancel</Button>
             <Button onClick={saveEditor}>Save</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!viewingKey} onOpenChange={(v) => { if (!v) setViewingKey(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Note — {viewingKey}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
+            {viewingKey ? dateMap[viewingKey] : ""}
+          </p>
         </DialogContent>
       </Dialog>
     </div>
