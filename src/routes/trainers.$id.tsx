@@ -764,6 +764,17 @@ function MonthlyCalendar({
           </div>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!viewingKey} onOpenChange={(v) => { if (!v) setViewingKey(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Note — {viewingKey}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
+            {viewingKey ? dateMap[viewingKey] : ""}
+          </p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
