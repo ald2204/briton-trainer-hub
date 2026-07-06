@@ -127,11 +127,13 @@ function RootComponent() {
           <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 flex h-16 items-center justify-between gap-2 sm:gap-4">
             <Link to="/" className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
               <img src={sbiLogo.url} alt="SBI — Sekolah Berbahasa Inggris" className="h-7 sm:h-10 w-auto shrink-0" />
-              <span className="h-6 w-px bg-border" />
-              <img src={britonLogo.url} alt="Briton English Education" className="h-6 sm:h-8 w-auto shrink-0" />
+              <span className="h-6 w-px bg-border shrink-0" />
+              <img src={britonLogo.url} alt="Briton English Education" className="h-5 sm:h-8 w-auto shrink-0" />
             </Link>
             <nav className="flex items-center gap-1 shrink-0">
-              <NavLink to="/">Dashboard</NavLink>
+              <span className="hidden sm:inline-flex">
+                <NavLink to="/">Dashboard</NavLink>
+              </span>
               <NavLink to="/trainers">Trainers</NavLink>
               <AuthNav />
             </nav>
