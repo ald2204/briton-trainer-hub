@@ -124,13 +124,13 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen flex flex-col">
         <header className="border-b bg-card sticky top-0 z-30">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between gap-4">
-            <Link to="/" className="flex items-center gap-3 min-w-0">
-              <img src={sbiLogo.url} alt="SBI — Sekolah Berbahasa Inggris" className="h-10 w-auto" />
-              <span className="h-8 w-px bg-border hidden sm:block" />
-              <img src={britonLogo.url} alt="Briton English Education" className="h-8 w-auto hidden sm:block" />
+          <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 flex h-16 items-center justify-between gap-2 sm:gap-4">
+            <Link to="/" className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
+              <img src={sbiLogo.url} alt="SBI — Sekolah Berbahasa Inggris" className="h-7 sm:h-10 w-auto shrink-0" />
+              <span className="h-6 w-px bg-border" />
+              <img src={britonLogo.url} alt="Briton English Education" className="h-6 sm:h-8 w-auto shrink-0" />
             </Link>
-            <nav className="flex items-center gap-1">
+            <nav className="flex items-center gap-1 shrink-0">
               <NavLink to="/">Dashboard</NavLink>
               <NavLink to="/trainers">Trainers</NavLink>
               <AuthNav />
