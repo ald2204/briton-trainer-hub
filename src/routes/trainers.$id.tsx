@@ -129,7 +129,9 @@ function ProfilePage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { trainer, ready } = useTrainer(id);
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
+  const isOwner = !!trainer && !!user?.email && user.email.toLowerCase() === trainer.email.toLowerCase();
+  const canEdit = isAdmin || isOwner;
   const [draft, setDraft] = useState<Trainer | undefined>();
   const [editing, setEditing] = useState<SectionKey | null>(null);
   const [notes, setNotes] = useState("");
