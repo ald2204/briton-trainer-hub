@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   useTrainers,
   daysUntil,
   isAvailableForAssignment,
+  type Trainer,
 } from "@/lib/trainers-store";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Users,
   UserCheck,
